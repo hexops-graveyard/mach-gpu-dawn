@@ -26,20 +26,20 @@ jobs:
       #   run: echo "TODO(build-system): gh CLI has no way to mark draft as published?"
       #   env:
       #     GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      - name: Checkout hexops/mach monorepo
+      - name: Checkout hexops/mach-gpu-dawn repo
         uses: actions/checkout@v2
         with:
           repository: hexops/mach
           token: ${{ secrets.HEXOPS_MACH_GPU_DAWN_PUSH }}
-      - name: 'gpu/dawn: update hard-coded binary release version'
+      - name: 'update hard-coded binary release version'
         env:
           RELEASE_COMMIT: ${{env.recorded_release_version}}
         run: |
-          sed -i "/binary_version: \[\]const u8 =/c\            binary_version: []const u8 = \"release-$RELEASE_COMMIT\"," ./libs/gpu-dawn/build.zig
+          sed -i "/binary_version: \[\]const u8 =/c\            binary_version: []const u8 = \"release-$RELEASE_COMMIT\"," ./build.zig
       - name: 'gpu/dawn: use latest binary release'
         run: |
           git config user.name 'Release automation'
           git config user.email 'stephen@hexops.com'
           git add .
-          git commit -m 'gpu-dawn: update to latest binary release'
+          git commit -m 'update to latest binary release'
           git push -u origin HEAD
