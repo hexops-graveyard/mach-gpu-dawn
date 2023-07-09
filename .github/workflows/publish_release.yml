@@ -29,7 +29,7 @@ jobs:
       - name: Checkout hexops/mach-gpu-dawn repo
         uses: actions/checkout@v2
         with:
-          repository: hexops/mach
+          repository: hexops/mach-gpu-dawn
           token: ${{ secrets.HEXOPS_MACH_GPU_DAWN_PUSH }}
       - name: 'update hard-coded binary release version'
         env:
