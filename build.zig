@@ -64,7 +64,7 @@ pub const Options = struct {
     install_libs: bool = false,
 
     /// The binary release version to use from https://github.com/hexops/mach-gpu-dawn/releases
-            binary_version: []const u8 = "release-0591c5e",
+    binary_version: []const u8 = "release-0591c5e",
 
     /// Detects the default options to use for the given target.
     pub fn detectDefaults(self: Options, target: std.Target) Options {
@@ -114,9 +114,9 @@ fn linkFromSource(b: *Build, step: *std.build.CompileStep, options: Options) !vo
     // branch: mach
     try ensureGitRepoCloned(b.allocator, "https://github.com/hexops/DirectXShaderCompiler", "cff9a6f0b7f961748b822e1d313a7205dfdecf9d", sdkPath("/libs/DirectXShaderCompiler"));
 
-    step.addIncludePath(sdkPath("/libs/dawn/out/Debug/gen/include"));
-    step.addIncludePath(sdkPath("/libs/dawn/include"));
-    step.addIncludePath(sdkPath("/src/dawn"));
+    step.addIncludePath(.{ .path = sdkPath("/libs/dawn/out/Debug/gen/include") });
+    step.addIncludePath(.{ .path = sdkPath("/libs/dawn/include") });
+    step.addIncludePath(.{ .path = sdkPath("/src/dawn") });
 
     if (options.separate_libs) {
         const lib_dawn_common = try buildLibDawnCommon(b, step, options);
@@ -300,12 +300,12 @@ pub fn linkFromBinary(b: *Build, step: *std.build.CompileStep, options: Options)
         b.allocator.free(include_dir);
     }
 
-    step.addLibraryPath(target_cache_dir);
+    step.addLibraryPath(.{ .path = target_cache_dir });
     step.linkSystemLibraryName("dawn");
     step.linkLibCpp();
 
-    step.addIncludePath(include_dir);
-    step.addIncludePath(sdkPath("/src/dawn"));
+    step.addIncludePath(.{ .path = include_dir });
+    step.addIncludePath(.{ .path = sdkPath("/src/dawn") });
 
     linkLibDawnCommonDependencies(b, step, options);
     linkLibDawnPlatformDependencies(b, step, options);
@@ -1665,9 +1665,9 @@ const xcode_frameworks = struct {
         // branch: mach
         xEnsureGitRepoCloned(b.allocator, "https://github.com/hexops/xcode-frameworks", "723aa55e9752c8c6c25d3413722b5fe13d72ac4f", xSdkPath("/zig-cache/xcode_frameworks")) catch |err| @panic(@errorName(err));
 
-        step.addFrameworkPath(xSdkPath("/zig-cache/xcode_frameworks/Frameworks"));
-        step.addSystemIncludePath(xSdkPath("/zig-cache/xcode_frameworks/include"));
-        step.addLibraryPath(xSdkPath("/zig-cache/xcode_frameworks/lib"));
+        step.addFrameworkPath(.{ .path = xSdkPath("/zig-cache/xcode_frameworks/Frameworks") });
+        step.addSystemIncludePath(.{ .path = xSdkPath("/zig-cache/xcode_frameworks/include") });
+        step.addLibraryPath(.{ .path = xSdkPath("/zig-cache/xcode_frameworks/lib") });
     }
 
     fn xEnsureGitRepoCloned(allocator: std.mem.Allocator, clone_url: []const u8, revision: []const u8, dir: []const u8) !void {
