@@ -263,7 +263,6 @@ pub fn linkFromBinary(b: *Build, step: *std.build.CompileStep, options: Options)
     };
     if (!binaries_available) {
         const zig_triple = try target.zigTriple(b.allocator);
-        defer b.allocator.free(zig_triple);
         std.log.err("gpu-dawn binaries for {s} not available.", .{zig_triple});
         std.log.err("-> open an issue: https://github.com/hexops/mach/issues", .{});
         std.log.err("-> build from source (takes 5-15 minutes):", .{});
@@ -283,7 +282,6 @@ pub fn linkFromBinary(b: *Build, step: *std.build.CompileStep, options: Options)
     binary_target.os_version_max = .{ .none = undefined };
     binary_target.glibc_version = null;
     const zig_triple = try binary_target.zigTriple(b.allocator);
-    defer b.allocator.free(zig_triple);
     try ensureBinaryDownloaded(b.allocator, zig_triple, options.debug, target.os.tag == .windows, options.binary_version);
 
     const base_cache_dir_rel = try std.fs.path.join(b.allocator, &.{ "zig-cache", "mach", "gpu-dawn" });
@@ -293,12 +291,6 @@ pub fn linkFromBinary(b: *Build, step: *std.build.CompileStep, options: Options)
     const release_tag = if (options.debug) "debug" else "release-fast";
     const target_cache_dir = try std.fs.path.join(b.allocator, &.{ commit_cache_dir, zig_triple, release_tag });
     const include_dir = try std.fs.path.join(b.allocator, &.{ commit_cache_dir, "include" });
-    defer {
-        b.allocator.free(base_cache_dir);
-        b.allocator.free(commit_cache_dir);
-        b.allocator.free(target_cache_dir);
-        b.allocator.free(include_dir);
-    }
 
     step.addLibraryPath(.{ .path = target_cache_dir });
     step.linkSystemLibraryName("dawn");
@@ -1588,7 +1580,6 @@ fn scanSources(
     excluding_contains: []const []const u8,
 ) !void {
     const abs_dir = try std.fs.path.join(b.allocator, &.{ sdkPath("/"), rel_dir });
-    defer b.allocator.free(abs_dir);
     var dir = std.fs.openIterableDirAbsolute(abs_dir, .{}) catch |err| {
         std.log.err("mach: error: failed to open: {s}", .{abs_dir});
         return err;
