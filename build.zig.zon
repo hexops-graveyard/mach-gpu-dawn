@@ -2,6 +2,10 @@
     .name = "mach-gpu-dawn",
     .version = "0.2.0",
     .dependencies = .{
+        .xcode_frameworks = .{
+            .url = "https://github.com/hexops/xcode-frameworks-pkg/archive/d486474a6af7fafd89e8314e0bf7eca4709f811b.tar.gz",
+            .hash = "1220293eae4bf67a7c27a18a8133621337cde91a97bc6859a9431b3b2d4217dfb5fb",
+        },
         .mach_glfw = .{
             .url = "https://pkg.machengine.org/mach-glfw/49110c5b543b3a1990895d63bcde50ce6b979e14.tar.gz",
             .hash = "1220747a28abe319187941ea4f89af7623d38cc4634f8b727ee7e25b73b76169be12",
