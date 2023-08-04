@@ -7,12 +7,12 @@
             .hash = "1220293eae4bf67a7c27a18a8133621337cde91a97bc6859a9431b3b2d4217dfb5fb",
         },
         .mach_glfw = .{
-            .url = "https://pkg.machengine.org/mach-glfw/49110c5b543b3a1990895d63bcde50ce6b979e14.tar.gz",
-            .hash = "1220747a28abe319187941ea4f89af7623d38cc4634f8b727ee7e25b73b76169be12",
+            .url = "https://pkg.machengine.org/mach-glfw/b250f2c068e91d8a5bf10975d53a8ca2cb8e2066.tar.gz",
+            .hash = "12206a15305a16421a986cbaf98d3c839c86a77c78a3bb2b570cea49aee7bb37ce2d",
         },
         .glfw = .{
-            .url = "https://pkg.machengine.org/glfw/5c90f615ede348d61ea58046142e739fd2d3182e.tar.gz",
-            .hash = "12202207fffbd01f9a87fd13f313a892318b7f8f9f146f077a047f8eadee1d70f09f",
+            .url = "https://pkg.machengine.org/glfw/77086fe2c1bbbf55fa5f2572eb6a604bc3be639f.tar.gz",
+            .hash = "1220667f4ae9cab35b27fa129e265457be42a2f11f2ca57d9ea5d7f56213cbc3ffde",
         },
         .direct3d_headers = .{
             .url = "https://pkg.machengine.org/direct3d-headers/c878b57ed63e4cf320f9c2f48991f8c3146f4e20.tar.gz",
