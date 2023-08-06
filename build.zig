@@ -1034,6 +1034,8 @@ fn buildLibTint(b: *Build, step: *std.build.CompileStep, options: Options) !*std
         "-DTINT_BUILD_MSL_WRITER=1",
         "-DTINT_BUILD_HLSL_WRITER=1",
         "-DTINT_BUILD_GLSL_WRITER=1",
+        // TODO: enable WGSL writer, but remove this.
+        // "-DTINT_BUILD_SYNTAX_TREE_WRITER=1",
 
         include("libs/dawn/"),
         include("libs/dawn/include/tint"),
@@ -1055,25 +1057,32 @@ fn buildLibTint(b: *Build, step: *std.build.CompileStep, options: Options) !*std
     try appendLangScannedSources(b, lib, .{
         .rel_dirs = &.{
             "libs/dawn/src/tint",
-            "libs/dawn/src/tint/reader/",
-            "libs/dawn/src/tint/writer/syntax_tree",
-            "libs/dawn/src/tint/ir",
-            "libs/dawn/src/tint/ir/transform",
-            // "libs/dawn/src/tint/utils/io",
-            "libs/dawn/src/tint/templates",
-            "libs/dawn/src/tint/constant/",
-            "libs/dawn/src/tint/diagnostic/",
-            "libs/dawn/src/tint/inspector/",
-            "libs/dawn/src/tint/builtin/",
-            "libs/dawn/src/tint/resolver/",
-            "libs/dawn/src/tint/utils/",
-            "libs/dawn/src/tint/type/",
-            "libs/dawn/src/tint/transform/",
-            "libs/dawn/src/tint/writer/",
-            "libs/dawn/src/tint/ast/",
-            "libs/dawn/src/tint/ast/transform/",
-            "libs/dawn/src/tint/ast/transform/utils/",
-            "libs/dawn/src/tint/val/",
+            "libs/dawn/src/tint/lang/core/builtin/",
+            "libs/dawn/src/tint/lang/core/constant/",
+            "libs/dawn/src/tint/lang/core/ir/",
+            "libs/dawn/src/tint/lang/core/ir/transform/",
+            "libs/dawn/src/tint/lang/core/type/",
+
+            // "libs/dawn/src/tint/utils/cli",
+            // "libs/dawn/src/tint/utils/command",
+            // "libs/dawn/src/tint/utils/containers",
+            // "libs/dawn/src/tint/utils/debug",
+            // "libs/dawn/src/tint/utils/diagnostic",
+            // "libs/dawn/src/tint/utils/file",
+            // "libs/dawn/src/tint/utils/generator",
+            // "libs/dawn/src/tint/utils/ice",
+            // "libs/dawn/src/tint/utils/id",
+            // "libs/dawn/src/tint/utils/macros",
+            // "libs/dawn/src/tint/utils/math",
+            // "libs/dawn/src/tint/utils/memory",
+            // "libs/dawn/src/tint/utils/reflection",
+            // "libs/dawn/src/tint/utils/result",
+            // "libs/dawn/src/tint/utils/rtti",
+            // "libs/dawn/src/tint/utils/strconv",
+            // "libs/dawn/src/tint/utils/symbol",
+            // "libs/dawn/src/tint/utils/templates",
+            // "libs/dawn/src/tint/utils/text",
+            // "libs/dawn/src/tint/utils/traits",
         },
         .flags = flags.items,
         .excluding_contains = &.{ "test", "bench", "printer_windows", "printer_posix", "printer_other", "glsl.cc" },
@@ -1083,86 +1092,90 @@ fn buildLibTint(b: *Build, step: *std.build.CompileStep, options: Options) !*std
 
     const tag = step.target_info.target.os.tag;
     if (tag == .windows) {
-        try cpp_sources.append(sdkPath("/libs/dawn/src/tint/diagnostic/printer_windows.cc"));
+        try cpp_sources.append(sdkPath("/libs/dawn/src/tint/utils/diagnostic/printer_windows.cc"));
     } else if (tag.isDarwin() or isLinuxDesktopLike(tag)) {
-        try cpp_sources.append(sdkPath("/libs/dawn/src/tint/diagnostic/printer_posix.cc"));
+        try cpp_sources.append(sdkPath("/libs/dawn/src/tint/utils/diagnostic/printer_posix.cc"));
     } else {
-        try cpp_sources.append(sdkPath("/libs/dawn/src/tint/diagnostic/printer_other.cc"));
+        try cpp_sources.append(sdkPath("/libs/dawn/src/tint/utils/diagnostic/printer_other.cc"));
     }
 
     // libtint_sem_src
     try appendLangScannedSources(b, lib, .{
         .rel_dirs = &.{
-            "libs/dawn/src/tint/sem/",
+            "libs/dawn/src/tint/lang/wgsl/sem/",
         },
         .flags = flags.items,
         .excluding_contains = &.{ "test", "benchmark" },
     });
 
-    // libtint_spv_reader_src
+    // spirv
     try appendLangScannedSources(b, lib, .{
         .rel_dirs = &.{
-            "libs/dawn/src/tint/reader/spirv/",
-        },
-        .flags = flags.items,
-        .excluding_contains = &.{ "test", "benchmark" },
-    });
-
-    // libtint_spv_writer_src
-    try appendLangScannedSources(b, lib, .{
-        .rel_dirs = &.{
-            "libs/dawn/src/tint/writer/spirv/",
-            // "libs/dawn/src/tint/writer/spirv/ir/",
+            "libs/dawn/src/tint/lang/spirv/reader",
+            "libs/dawn/src/tint/lang/spirv/reader/ast_parser",
+            "libs/dawn/src/tint/lang/spirv/writer",
+            "libs/dawn/src/tint/lang/spirv/writer/ast_printer",
+            "libs/dawn/src/tint/lang/spirv/writer/common",
+            "libs/dawn/src/tint/lang/spirv/writer/printer",
+            "libs/dawn/src/tint/lang/spirv/writer/raise",
         },
         .flags = flags.items,
         .excluding_contains = &.{ "test", "bench" },
     });
 
-    // TODO(build-system): make optional
-    // libtint_wgsl_reader_src
+    // wgsl
     try appendLangScannedSources(b, lib, .{
         .rel_dirs = &.{
-            "libs/dawn/src/tint/reader/wgsl/",
+            "libs/dawn/src/tint/lang/wgsl/reader",
+            "libs/dawn/src/tint/lang/wgsl/reader/parser",
+            "libs/dawn/src/tint/lang/wgsl/reader/program_to_ir",
+            "libs/dawn/src/tint/lang/wgsl/ast",
+            "libs/dawn/src/tint/lang/wgsl/ast/transform",
+            "libs/dawn/src/tint/lang/wgsl/helpers",
+            "libs/dawn/src/tint/lang/wgsl/inspector",
+            "libs/dawn/src/tint/lang/wgsl/program",
+            "libs/dawn/src/tint/lang/wgsl/resolver",
+            // TODO: enable WGSL writer
+            // "libs/dawn/src/tint/lang/wgsl/writer",
+            // "libs/dawn/src/tint/lang/wgsl/writer/ast_printer",
+            // "libs/dawn/src/tint/lang/wgsl/writer/ir_to_program",
+            // TODO: disable this:
+            // // "libs/dawn/src/tint/lang/wgsl/writer/syntax_tree_printer",
         },
         .flags = flags.items,
         .excluding_contains = &.{ "test", "bench" },
     });
 
-    // TODO(build-system): make optional
-    // libtint_wgsl_writer_src
+    // msl
     try appendLangScannedSources(b, lib, .{
         .rel_dirs = &.{
-            "libs/dawn/src/tint/writer/wgsl/",
+            "libs/dawn/src/tint/lang/msl/writer",
+            "libs/dawn/src/tint/lang/msl/writer/ast_printer",
+            "libs/dawn/src/tint/lang/msl/writer/common",
+            "libs/dawn/src/tint/lang/msl/writer/printer",
+            "libs/dawn/src/tint/lang/msl/validate",
         },
         .flags = flags.items,
         .excluding_contains = &.{ "test", "bench" },
     });
 
-    // TODO(build-system): make optional
-    // libtint_msl_writer_src
+    // hlsl
     try appendLangScannedSources(b, lib, .{
         .rel_dirs = &.{
-            "libs/dawn/src/tint/writer/msl/",
+            "libs/dawn/src/tint/lang/hlsl/writer",
+            "libs/dawn/src/tint/lang/hlsl/writer/ast_printer",
+            "libs/dawn/src/tint/lang/hlsl/writer/common",
+            "libs/dawn/src/tint/lang/hlsl/validate",
         },
         .flags = flags.items,
         .excluding_contains = &.{ "test", "bench" },
     });
 
-    // TODO(build-system): make optional
-    // libtint_hlsl_writer_src
+    // glsl
     try appendLangScannedSources(b, lib, .{
         .rel_dirs = &.{
-            "libs/dawn/src/tint/writer/hlsl/",
-        },
-        .flags = flags.items,
-        .excluding_contains = &.{ "test", "bench" },
-    });
-
-    // TODO(build-system): make optional
-    // libtint_glsl_writer_src
-    try appendLangScannedSources(b, lib, .{
-        .rel_dirs = &.{
-            "libs/dawn/src/tint/writer/glsl/",
+            "libs/dawn/src/tint/lang/glsl/",
+            "libs/dawn/src/tint/lang/glsl/writer",
         },
         .flags = flags.items,
         .excluding_contains = &.{ "test", "bench" },
@@ -1378,6 +1391,7 @@ fn linkLibDxcompilerDependencies(b: *Build, step: *std.build.CompileStep, option
             .target = step.target,
             .optimize = step.optimize,
         }).artifact("direct3d-headers"));
+        @import("direct3d_headers").addLibraryPath(step);
 
         step.linkSystemLibraryName("oleaut32");
         step.linkSystemLibraryName("ole32");
