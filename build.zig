@@ -64,7 +64,7 @@ pub const Options = struct {
     install_libs: bool = false,
 
     /// The binary release version to use from https://github.com/hexops/mach-gpu-dawn/releases
-            binary_version: []const u8 = "release-8cf30d9",
+    binary_version: []const u8 = "release-8cf30d9",
 
     /// Detects the default options to use for the given target.
     pub fn detectDefaults(self: Options, target: std.Target) Options {
@@ -92,10 +92,10 @@ pub fn link(b: *Build, step: *std.build.CompileStep, options: Options) !void {
     if (step.target_info.target.os.tag == .windows) @import("direct3d_headers").addLibraryPath(step);
     if (step.target_info.target.os.tag == .macos) @import("xcode_frameworks").addPaths(b, step);
 
-    try if (options.from_source)
-        linkFromSource(b, step, opt)
+    if (options.from_source or isEnvVarTruthy(b.allocator, "DAWN_FROM_SOURCE"))
+        try linkFromSource(b, step, opt)
     else
-        linkFromBinary(b, step, opt);
+        try linkFromBinary(b, step, opt);
 }
 
 fn linkFromSource(b: *Build, step: *std.build.CompileStep, options: Options) !void {
@@ -256,7 +256,7 @@ pub fn linkFromBinary(b: *Build, step: *std.build.CompileStep, options: Options)
         std.log.err("gpu-dawn binaries for {s} not available.", .{zig_triple});
         std.log.err("-> open an issue: https://github.com/hexops/mach/issues", .{});
         std.log.err("-> build from source (takes 5-15 minutes):", .{});
-        std.log.err("       use -Ddawn-from-source=true or set `Options.from_source = true`\n", .{});
+        std.log.err("    set `DAWN_FROM_SOURCE` environment variable or `Options.from_source` to `true`\n", .{});
         if (target.os.tag == .macos) {
             std.log.err("", .{});
             if (target.cpu.arch.isX86()) std.log.err("-> Did you mean to use -Dtarget=x86_64-macos.12.0...13.1-none ?", .{});
