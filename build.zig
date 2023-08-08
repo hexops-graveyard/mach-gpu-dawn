@@ -64,7 +64,7 @@ pub const Options = struct {
     install_libs: bool = false,
 
     /// The binary release version to use from https://github.com/hexops/mach-gpu-dawn/releases
-            binary_version: []const u8 = "release-326edcd",
+    binary_version: []const u8 = "release-326edcd",
 
     /// Detects the default options to use for the given target.
     pub fn detectDefaults(self: Options, target: std.Target) Options {
@@ -1034,8 +1034,7 @@ fn buildLibTint(b: *Build, step: *std.build.CompileStep, options: Options) !*std
         "-DTINT_BUILD_MSL_WRITER=1",
         "-DTINT_BUILD_HLSL_WRITER=1",
         "-DTINT_BUILD_GLSL_WRITER=1",
-        // TODO: enable WGSL writer, but remove this.
-        // "-DTINT_BUILD_SYNTAX_TREE_WRITER=1",
+        "-DTINT_BUILD_SYNTAX_TREE_WRITER=1",
 
         include("libs/dawn/"),
         include("libs/dawn/include/tint"),
@@ -1057,7 +1056,8 @@ fn buildLibTint(b: *Build, step: *std.build.CompileStep, options: Options) !*std
     try appendLangScannedSources(b, lib, .{
         .rel_dirs = &.{
             "libs/dawn/src/tint",
-            "libs/dawn/src/tint/lang/core/builtin/",
+            "libs/dawn/src/tint/lang/core/",
+            "libs/dawn/src/tint/lang/core/intrinsic/",
             "libs/dawn/src/tint/lang/core/constant/",
             "libs/dawn/src/tint/lang/core/ir/",
             "libs/dawn/src/tint/lang/core/ir/transform/",
@@ -1135,12 +1135,10 @@ fn buildLibTint(b: *Build, step: *std.build.CompileStep, options: Options) !*std
             "libs/dawn/src/tint/lang/wgsl/inspector",
             "libs/dawn/src/tint/lang/wgsl/program",
             "libs/dawn/src/tint/lang/wgsl/resolver",
-            // TODO: enable WGSL writer
-            // "libs/dawn/src/tint/lang/wgsl/writer",
-            // "libs/dawn/src/tint/lang/wgsl/writer/ast_printer",
-            // "libs/dawn/src/tint/lang/wgsl/writer/ir_to_program",
-            // TODO: disable this:
-            // // "libs/dawn/src/tint/lang/wgsl/writer/syntax_tree_printer",
+            "libs/dawn/src/tint/lang/wgsl/writer",
+            "libs/dawn/src/tint/lang/wgsl/writer/ast_printer",
+            "libs/dawn/src/tint/lang/wgsl/writer/ir_to_program",
+            "libs/dawn/src/tint/lang/wgsl/writer/syntax_tree_printer",
         },
         .flags = flags.items,
         .excluding_contains = &.{ "test", "bench" },
