@@ -16,7 +16,7 @@ jobs:
       - name: Setup Zig
         run: |
           sudo apt install xz-utils
-          sudo sh -c 'wget -c https://pkg.machengine.org/zig/zig-linux-x86_64-0.11.0-dev.4410+76f7b40e1.tar.xz -O - | tar -xJ --strip-components=1 -C /usr/local/bin'
+          sudo sh -c 'wget -c https://pkg.machengine.org/zig/zig-linux-x86_64-0.12.0-dev.21+ac95cfe44.tar.xz -O - | tar -xJ --strip-components=1 -C /usr/local/bin'
       - name: install (debug)
         run: zig build install -Dcpu=x86_64_v3 -Dtarget=x86_64-linux-gnu
       - name: upload (debug)
@@ -35,7 +35,7 @@ jobs:
       - name: Setup Zig
         run: |
           sudo apt install xz-utils
-          sudo sh -c 'wget -c https://pkg.machengine.org/zig/zig-linux-x86_64-0.11.0-dev.4410+76f7b40e1.tar.xz -O - | tar -xJ --strip-components=1 -C /usr/local/bin'
+          sudo sh -c 'wget -c https://pkg.machengine.org/zig/zig-linux-x86_64-0.12.0-dev.21+ac95cfe44.tar.xz -O - | tar -xJ --strip-components=1 -C /usr/local/bin'
       - name: install (release-fast)
         run: zig build install -Dcpu=x86_64_v3 -Doptimize=ReleaseFast -Dtarget=x86_64-linux-gnu
       - name: upload (release-fast)
@@ -54,7 +54,7 @@ jobs:
       - name: Setup Zig
         run: |
           sudo apt install xz-utils
-          sudo sh -c 'wget -c https://pkg.machengine.org/zig/zig-linux-x86_64-0.11.0-dev.4410+76f7b40e1.tar.xz -O - | tar -xJ --strip-components=1 -C /usr/local/bin'
+          sudo sh -c 'wget -c https://pkg.machengine.org/zig/zig-linux-x86_64-0.12.0-dev.21+ac95cfe44.tar.xz -O - | tar -xJ --strip-components=1 -C /usr/local/bin'
       - name: install (debug)
         run: zig build install -Dtarget=x86_64-linux-musl -Dcpu=x86_64_v3
       - name: upload (debug)
@@ -73,7 +73,7 @@ jobs:
       - name: Setup Zig
         run: |
           sudo apt install xz-utils
-          sudo sh -c 'wget -c https://pkg.machengine.org/zig/zig-linux-x86_64-0.11.0-dev.4410+76f7b40e1.tar.xz -O - | tar -xJ --strip-components=1 -C /usr/local/bin'
+          sudo sh -c 'wget -c https://pkg.machengine.org/zig/zig-linux-x86_64-0.12.0-dev.21+ac95cfe44.tar.xz -O - | tar -xJ --strip-components=1 -C /usr/local/bin'
       - name: install (release-fast)
         run: zig build install -Doptimize=ReleaseFast -Dtarget=x86_64-linux-musl -Dcpu=x86_64_v3
       - name: upload (release-fast)
@@ -92,7 +92,7 @@ jobs:
       - name: Setup Zig
         run: |
           sudo apt install xz-utils
-          sudo sh -c 'wget -c https://pkg.machengine.org/zig/zig-linux-x86_64-0.11.0-dev.4410+76f7b40e1.tar.xz -O - | tar -xJ --strip-components=1 -C /usr/local/bin'
+          sudo sh -c 'wget -c https://pkg.machengine.org/zig/zig-linux-x86_64-0.12.0-dev.21+ac95cfe44.tar.xz -O - | tar -xJ --strip-components=1 -C /usr/local/bin'
       - name: install (debug)
         run: zig build install -Dtarget=aarch64-linux-gnu
       - name: upload (debug)
@@ -111,7 +111,7 @@ jobs:
       - name: Setup Zig
         run: |
           sudo apt install xz-utils
-          sudo sh -c 'wget -c https://pkg.machengine.org/zig/zig-linux-x86_64-0.11.0-dev.4410+76f7b40e1.tar.xz -O - | tar -xJ --strip-components=1 -C /usr/local/bin'
+          sudo sh -c 'wget -c https://pkg.machengine.org/zig/zig-linux-x86_64-0.12.0-dev.21+ac95cfe44.tar.xz -O - | tar -xJ --strip-components=1 -C /usr/local/bin'
       - name: install (release-fast)
         run: zig build install -Doptimize=ReleaseFast -Dtarget=aarch64-linux-gnu
       - name: upload (release-fast)
@@ -130,7 +130,7 @@ jobs:
       - name: Setup Zig
         run: |
           sudo apt install xz-utils
-          sudo sh -c 'wget -c https://pkg.machengine.org/zig/zig-linux-x86_64-0.11.0-dev.4410+76f7b40e1.tar.xz -O - | tar -xJ --strip-components=1 -C /usr/local/bin'
+          sudo sh -c 'wget -c https://pkg.machengine.org/zig/zig-linux-x86_64-0.12.0-dev.21+ac95cfe44.tar.xz -O - | tar -xJ --strip-components=1 -C /usr/local/bin'
       - name: install (debug)
         run: zig build install -Dtarget=aarch64-linux-musl
       - name: upload (debug)
@@ -149,7 +149,7 @@ jobs:
       - name: Setup Zig
         run: |
           sudo apt install xz-utils
-          sudo sh -c 'wget -c https://pkg.machengine.org/zig/zig-linux-x86_64-0.11.0-dev.4410+76f7b40e1.tar.xz -O - | tar -xJ --strip-components=1 -C /usr/local/bin'
+          sudo sh -c 'wget -c https://pkg.machengine.org/zig/zig-linux-x86_64-0.12.0-dev.21+ac95cfe44.tar.xz -O - | tar -xJ --strip-components=1 -C /usr/local/bin'
       - name: install (release-fast)
         run: zig build install -Doptimize=ReleaseFast -Dtarget=aarch64-linux-musl
       - name: upload (release-fast)
@@ -168,10 +168,10 @@ jobs:
       - name: Setup Zig
         run: |
           $ProgressPreference = 'SilentlyContinue'
-          Invoke-WebRequest -Uri "https://pkg.machengine.org/zig/zig-windows-x86_64-0.11.0-dev.4410+76f7b40e1.zip" -OutFile "C:\zig.zip"
+          Invoke-WebRequest -Uri "https://pkg.machengine.org/zig/zig-windows-x86_64-0.12.0-dev.21+ac95cfe44.zip" -OutFile "C:\zig.zip"
           cd C:\
           7z x zig.zip
-          Add-Content $env:GITHUB_PATH "C:\zig-windows-x86_64-0.11.0-dev.4410+76f7b40e1\"
+          Add-Content $env:GITHUB_PATH "C:\zig-windows-x86_64-0.12.0-dev.21+ac95cfe44\"
       - name: install (debug)
         run: zig build install -Dtarget=x86_64-windows-gnu -Dcpu=x86_64_v3
       - name: upload (debug)
@@ -192,10 +192,10 @@ jobs:
       - name: Setup Zig
         run: |
           $ProgressPreference = 'SilentlyContinue'
-          Invoke-WebRequest -Uri "https://pkg.machengine.org/zig/zig-windows-x86_64-0.11.0-dev.4410+76f7b40e1.zip" -OutFile "C:\zig.zip"
+          Invoke-WebRequest -Uri "https://pkg.machengine.org/zig/zig-windows-x86_64-0.12.0-dev.21+ac95cfe44.zip" -OutFile "C:\zig.zip"
           cd C:\
           7z x zig.zip
-          Add-Content $env:GITHUB_PATH "C:\zig-windows-x86_64-0.11.0-dev.4410+76f7b40e1\"
+          Add-Content $env:GITHUB_PATH "C:\zig-windows-x86_64-0.12.0-dev.21+ac95cfe44\"
       - name: install (release-fast)
         run: zig build install -Dtarget=x86_64-windows-gnu -Doptimize=ReleaseFast -Dcpu=x86_64_v3
       - name: upload (release-fast)
@@ -217,7 +217,7 @@ jobs:
         run: |
           brew uninstall --ignore-dependencies libx11 # https://github.com/ziglang/zig/issues/11066
           brew install xz
-          sudo sh -c 'wget -c https://pkg.machengine.org/zig/zig-macos-x86_64-0.11.0-dev.4410+76f7b40e1.tar.xz -O - | tar -xJ --strip-components=1 -C /usr/local/bin'
+          sudo sh -c 'wget -c https://pkg.machengine.org/zig/zig-macos-x86_64-0.12.0-dev.21+ac95cfe44.tar.xz -O - | tar -xJ --strip-components=1 -C /usr/local/bin'
       - name: install (debug)
         run: zig build install -Dtarget=x86_64-macos
       - name: upload (debug)
@@ -237,7 +237,7 @@ jobs:
         run: |
           brew uninstall --ignore-dependencies libx11 # https://github.com/ziglang/zig/issues/11066
           brew install xz
-          sudo sh -c 'wget -c https://pkg.machengine.org/zig/zig-macos-x86_64-0.11.0-dev.4410+76f7b40e1.tar.xz -O - | tar -xJ --strip-components=1 -C /usr/local/bin'
+          sudo sh -c 'wget -c https://pkg.machengine.org/zig/zig-macos-x86_64-0.12.0-dev.21+ac95cfe44.tar.xz -O - | tar -xJ --strip-components=1 -C /usr/local/bin'
       - name: install (release-fast)
         run: zig build install -Doptimize=ReleaseFast -Dtarget=x86_64-macos
       - name: upload (release-fast)
