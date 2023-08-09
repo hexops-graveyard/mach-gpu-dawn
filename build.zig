@@ -64,7 +64,7 @@ pub const Options = struct {
     install_libs: bool = false,
 
     /// The binary release version to use from https://github.com/hexops/mach-gpu-dawn/releases
-            binary_version: []const u8 = "release-f15cb47",
+    binary_version: []const u8 = "release-f15cb47",
 
     /// Detects the default options to use for the given target.
     pub fn detectDefaults(self: Options, target: std.Target) Options {
@@ -661,9 +661,10 @@ fn buildLibDawnPlatform(b: *Build, step: *std.build.CompileStep, options: Option
 
     var cpp_sources = std.ArrayList([]const u8).init(b.allocator);
     inline for ([_][]const u8{
-        "src/dawn/platform/DawnPlatform.cpp",
-        "src/dawn/platform/WorkerThread.cpp",
+        "src/dawn/platform/metrics/HistogramMacros.cpp",
         "src/dawn/platform/tracing/EventTracer.cpp",
+        "src/dawn/platform/WorkerThread.cpp",
+        "src/dawn/platform/DawnPlatform.cpp",
     }) |path| {
         const abs_path = sdkPath("/libs/dawn/" ++ path);
         try cpp_sources.append(abs_path);
@@ -1170,6 +1171,8 @@ fn buildLibTint(b: *Build, step: *std.build.CompileStep, options: Options) !*std
         .rel_dirs = &.{
             "libs/dawn/src/tint/lang/glsl/",
             "libs/dawn/src/tint/lang/glsl/writer",
+            "libs/dawn/src/tint/lang/glsl/writer/ast_printer",
+            "libs/dawn/src/tint/lang/glsl/writer/common",
         },
         .flags = flags.items,
         .excluding_contains = &.{ "test", "bench" },
