@@ -727,10 +727,6 @@ fn linkLibDawnNativeDependencies(b: *Build, step: *std.build.CompileStep, option
         step.linkFramework("IOSurface");
         step.linkFramework("QuartzCore");
     }
-    const tag = step.target_info.target.os.tag;
-    if (isLinuxDesktopLike(tag)) {
-        step.linkSystemLibraryName("X11");
-    }
 }
 
 // Builds dawn native sources; derived from src/dawn/native/BUILD.gn
