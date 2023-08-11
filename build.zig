@@ -558,8 +558,8 @@ pub fn appendFlags(step: *std.build.CompileStep, flags: *std.ArrayList([]const u
     if (debug_symbols) try flags.append("-g1") else try flags.append("-g0");
     if (is_cpp) try flags.append("-std=c++17");
     if (isLinuxDesktopLike(step.target_info.target.os.tag)) {
-        try flags.append("-DDAWN_USE_X11");
-        try flags.append("-DDAWN_USE_WAYLAND");
+        step.defineCMacro("DAWN_USE_X11", "");
+        step.defineCMacro("DAWN_USE_WAYLAND", "");
     }
 }
 
@@ -591,6 +591,8 @@ fn buildLibDawnCommon(b: *Build, step: *std.build.CompileStep, options: Options)
         .target = lib.target,
         .optimize = lib.optimize,
     }).artifact("x11-headers"));
+
+    defineDawnEnableBackend(lib, options);
 
     var flags = std.ArrayList([]const u8).init(b.allocator);
     try flags.appendSlice(&.{
@@ -625,7 +627,7 @@ fn buildLibDawnCommon(b: *Build, step: *std.build.CompileStep, options: Options)
 
     var cpp_flags = std.ArrayList([]const u8).init(b.allocator);
     try cpp_flags.appendSlice(flags.items);
-    try appendFlags(step, &cpp_flags, options.debug, true);
+    try appendFlags(lib, &cpp_flags, options.debug, true);
     lib.addCSourceFiles(cpp_sources.items, cpp_flags.items);
     return lib;
 }
@@ -651,7 +653,7 @@ fn buildLibDawnPlatform(b: *Build, step: *std.build.CompileStep, options: Option
     linkLibDawnPlatformDependencies(b, lib, options);
 
     var cpp_flags = std.ArrayList([]const u8).init(b.allocator);
-    try appendFlags(step, &cpp_flags, options.debug, true);
+    try appendFlags(lib, &cpp_flags, options.debug, true);
     try cpp_flags.appendSlice(&.{
         include("libs/dawn/src"),
         include("libs/dawn/include"),
@@ -674,41 +676,22 @@ fn buildLibDawnPlatform(b: *Build, step: *std.build.CompileStep, options: Option
     return lib;
 }
 
-fn appendDawnEnableBackendTypeFlags(flags: *std.ArrayList([]const u8), options: Options) !void {
-    const d3d12 = "-DDAWN_ENABLE_BACKEND_D3D12";
-    const metal = "-DDAWN_ENABLE_BACKEND_METAL";
-    const vulkan = "-DDAWN_ENABLE_BACKEND_VULKAN";
-    const opengl = "-DDAWN_ENABLE_BACKEND_OPENGL";
-    const desktop_gl = "-DDAWN_ENABLE_BACKEND_DESKTOP_GL";
-    const opengl_es = "-DDAWN_ENABLE_BACKEND_OPENGLES";
-    const backend_null = "-DDAWN_ENABLE_BACKEND_NULL";
-
-    try flags.append(backend_null);
-    if (options.d3d12.?) try flags.append(d3d12);
-    if (options.metal.?) try flags.append(metal);
-    if (options.vulkan.?) try flags.append(vulkan);
-    if (options.desktop_gl.?) try flags.appendSlice(&.{ opengl, desktop_gl });
-    if (options.opengl_es.?) try flags.appendSlice(&.{ opengl, opengl_es });
+fn defineDawnEnableBackend(step: *std.build.CompileStep, options: Options) void {
+    step.defineCMacro("DAWN_ENABLE_BACKEND_NULL", "1");
+    // TODO: support the Direct3D 11 backend
+    // if (options.d3d11.?) step.defineCMacro("DAWN_ENABLE_BACKEND_D3D11", "1");
+    if (options.d3d12.?) step.defineCMacro("DAWN_ENABLE_BACKEND_D3D12", "1");
+    if (options.metal.?) step.defineCMacro("DAWN_ENABLE_BACKEND_METAL", "1");
+    if (options.vulkan.?) step.defineCMacro("DAWN_ENABLE_BACKEND_VULKAN", "1");
+    if (options.desktop_gl.?) {
+        step.defineCMacro("DAWN_ENABLE_BACKEND_OPENGL", "1");
+        step.defineCMacro("DAWN_ENABLE_BACKEND_DESKTOP_GL", "1");
+    }
+    if (options.opengl_es.?) {
+        step.defineCMacro("DAWN_ENABLE_BACKEND_OPENGL", "1");
+        step.defineCMacro("DAWN_ENABLE_BACKEND_OPENGLES", "1");
+    }
 }
-
-const dawn_d3d12_flags = &[_][]const u8{
-    "-DDAWN_NO_WINDOWS_UI",
-    "-D__EMULATE_UUID=1",
-    "-Wno-nonportable-include-path",
-    "-Wno-extern-c-compat",
-    "-Wno-invalid-noreturn",
-    "-Wno-pragma-pack",
-    "-Wno-microsoft-template-shadow",
-    "-Wno-unused-command-line-argument",
-    "-Wno-microsoft-exception-spec",
-    "-Wno-implicit-exception-spec-mismatch",
-    "-Wno-unknown-attributes",
-    "-Wno-c++20-extensions",
-    "-D_CRT_SECURE_NO_WARNINGS",
-    "-DWIN32_LEAN_AND_MEAN",
-    "-DD3D10_ARBITRARY_HEADER_ORDERING",
-    "-DNOMINMAX",
-};
 
 fn linkLibDawnNativeDependencies(b: *Build, step: *std.build.CompileStep, options: Options) void {
     step.linkLibCpp();
@@ -760,9 +743,20 @@ fn buildLibDawnNative(b: *Build, step: *std.build.CompileStep, options: Options)
 
     lib.defineCMacro("_HRESULT_DEFINED", "");
     lib.defineCMacro("HRESULT", "long");
+    defineDawnEnableBackend(lib, options);
+
+    // TODO(build-system): make these optional
+    lib.defineCMacro("HRESULT", "1");
+    lib.defineCMacro("TINT_BUILD_SPV_READER", "1");
+    lib.defineCMacro("TINT_BUILD_SPV_WRITER", "1");
+    lib.defineCMacro("TINT_BUILD_WGSL_READER", "1");
+    lib.defineCMacro("TINT_BUILD_WGSL_WRITER", "1");
+    lib.defineCMacro("TINT_BUILD_MSL_WRITER", "1");
+    lib.defineCMacro("TINT_BUILD_HLSL_WRITER", "1");
+    lib.defineCMacro("TINT_BUILD_GLSL_WRITER", "1");
+    lib.defineCMacro("DAWN_NO_WINDOWS_UI", "1");
 
     var flags = std.ArrayList([]const u8).init(b.allocator);
-    try appendDawnEnableBackendTypeFlags(&flags, options);
     try flags.appendSlice(&.{
         include("libs/dawn"),
         include("libs/dawn/src"),
@@ -773,16 +767,6 @@ fn buildLibDawnNative(b: *Build, step: *std.build.CompileStep, options: Options)
         "-Wno-deprecated-declarations",
         include("libs/dawn/third_party/abseil-cpp"),
 
-        // TODO(build-system): make these optional
-        "-DTINT_BUILD_SPV_READER=1",
-        "-DTINT_BUILD_SPV_WRITER=1",
-        "-DTINT_BUILD_WGSL_READER=1",
-        "-DTINT_BUILD_WGSL_WRITER=1",
-        "-DTINT_BUILD_MSL_WRITER=1",
-        "-DTINT_BUILD_HLSL_WRITER=1",
-        "-DTINT_BUILD_GLSL_WRITER=1",
-        "-DDAWN_NO_WINDOWS_UI",
-
         include("libs/dawn/"),
         include("libs/dawn/include/tint"),
         include("libs/dawn/third_party/vulkan-deps/vulkan-tools/src/"),
@@ -790,7 +774,26 @@ fn buildLibDawnNative(b: *Build, step: *std.build.CompileStep, options: Options)
         include("libs/dawn/out/Debug/gen/include"),
         include("libs/dawn/out/Debug/gen/src"),
     });
-    if (options.d3d12.?) try flags.appendSlice(dawn_d3d12_flags);
+    if (options.d3d12.?) {
+        lib.defineCMacro("DAWN_NO_WINDOWS_UI", "");
+        lib.defineCMacro("__EMULATE_UUID", "");
+        lib.defineCMacro("_CRT_SECURE_NO_WARNINGS", "");
+        lib.defineCMacro("WIN32_LEAN_AND_MEAN", "");
+        lib.defineCMacro("D3D10_ARBITRARY_HEADER_ORDERING", "");
+        lib.defineCMacro("NOMINMAX", "");
+        try flags.appendSlice(&.{
+            "-Wno-nonportable-include-path",
+            "-Wno-extern-c-compat",
+            "-Wno-invalid-noreturn",
+            "-Wno-pragma-pack",
+            "-Wno-microsoft-template-shadow",
+            "-Wno-unused-command-line-argument",
+            "-Wno-microsoft-exception-spec",
+            "-Wno-implicit-exception-spec-mismatch",
+            "-Wno-unknown-attributes",
+            "-Wno-c++20-extensions",
+        });
+    }
 
     try appendLangScannedSources(b, lib, .{
         .rel_dirs = &.{
@@ -935,7 +938,7 @@ fn buildLibDawnNative(b: *Build, step: *std.build.CompileStep, options: Options)
                 const abs_path = sdkPath("/libs/dawn/" ++ path);
                 try cpp_sources.append(abs_path);
             }
-            try cpp_sources.append("-DDAWN_USE_SYNC_FDS");
+            lib.defineCMacro("DAWN_USE_SYNC_FDS", "");
         }
     }
 
@@ -996,7 +999,7 @@ fn buildLibDawnNative(b: *Build, step: *std.build.CompileStep, options: Options)
 
     var cpp_flags = std.ArrayList([]const u8).init(b.allocator);
     try cpp_flags.appendSlice(flags.items);
-    try appendFlags(step, &cpp_flags, options.debug, true);
+    try appendFlags(lib, &cpp_flags, options.debug, true);
     lib.addCSourceFiles(cpp_sources.items, cpp_flags.items);
     return lib;
 }
@@ -1021,18 +1024,19 @@ fn buildLibTint(b: *Build, step: *std.build.CompileStep, options: Options) !*std
     if (options.install_libs) b.installArtifact(lib);
     linkLibTintDependencies(b, lib, options);
 
+    // TODO(build-system): make these optional
+    lib.defineCMacro("HRESULT", "1");
+    lib.defineCMacro("TINT_BUILD_SPV_READER", "1");
+    lib.defineCMacro("TINT_BUILD_SPV_WRITER", "1");
+    lib.defineCMacro("TINT_BUILD_WGSL_READER", "1");
+    lib.defineCMacro("TINT_BUILD_WGSL_WRITER", "1");
+    lib.defineCMacro("TINT_BUILD_MSL_WRITER", "1");
+    lib.defineCMacro("TINT_BUILD_HLSL_WRITER", "1");
+    lib.defineCMacro("TINT_BUILD_GLSL_WRITER", "1");
+    lib.defineCMacro("TINT_BUILD_SYNTAX_TREE_WRITER", "1");
+
     var flags = std.ArrayList([]const u8).init(b.allocator);
     try flags.appendSlice(&.{
-        // TODO(build-system): make these optional
-        "-DTINT_BUILD_SPV_READER=1",
-        "-DTINT_BUILD_SPV_WRITER=1",
-        "-DTINT_BUILD_WGSL_READER=1",
-        "-DTINT_BUILD_WGSL_WRITER=1",
-        "-DTINT_BUILD_MSL_WRITER=1",
-        "-DTINT_BUILD_HLSL_WRITER=1",
-        "-DTINT_BUILD_GLSL_WRITER=1",
-        "-DTINT_BUILD_SYNTAX_TREE_WRITER=1",
-
         include("libs/dawn/"),
         include("libs/dawn/include/tint"),
 
@@ -1181,7 +1185,7 @@ fn buildLibTint(b: *Build, step: *std.build.CompileStep, options: Options) !*std
 
     var cpp_flags = std.ArrayList([]const u8).init(b.allocator);
     try cpp_flags.appendSlice(flags.items);
-    try appendFlags(step, &cpp_flags, options.debug, true);
+    try appendFlags(lib, &cpp_flags, options.debug, true);
     lib.addCSourceFiles(cpp_sources.items, cpp_flags.items);
     return lib;
 }
@@ -1289,24 +1293,24 @@ fn buildLibAbseilCpp(b: *Build, step: *std.build.CompileStep, options: Options) 
 
     const target = step.target_info.target;
 
+    // musl needs this defined in order for off64_t to be a type, which abseil-cpp uses
+    lib.defineCMacro("_FILE_OFFSET_BITS", "1");
+    lib.defineCMacro("_LARGEFILE64_SOURCE", "1");
+
     var flags = std.ArrayList([]const u8).init(b.allocator);
     try flags.appendSlice(&.{
         include("libs/dawn"),
         include("libs/dawn/third_party/abseil-cpp"),
         "-Wno-deprecated-declarations",
-
-        // musl needs this defined in order for off64_t to be a type, which abseil-cpp uses
-        "-D_FILE_OFFSET_BITS",
-        "-D_LARGEFILE64_SOURCE",
     });
-    if (target.os.tag == .windows) try flags.appendSlice(&.{
-        "-DABSL_FORCE_THREAD_IDENTITY_MODE=2",
-        "-DWIN32_LEAN_AND_MEAN",
-        "-DD3D10_ARBITRARY_HEADER_ORDERING",
-        "-D_CRT_SECURE_NO_WARNINGS",
-        "-DNOMINMAX",
-        include("src/dawn/zig_mingw_pthread"),
-    });
+    if (target.os.tag == .windows) {
+        lib.defineCMacro("ABSL_FORCE_THREAD_IDENTITY_MODE", "2");
+        lib.defineCMacro("WIN32_LEAN_AND_MEAN", "1");
+        lib.defineCMacro("D3D10_ARBITRARY_HEADER_ORDERING", "1");
+        lib.defineCMacro("_CRT_SECURE_NO_WARNINGS", "1");
+        lib.defineCMacro("NOMINMAX", "1");
+        try flags.append(include("src/dawn/zig_mingw_pthread"));
+    }
 
     // absl
     try appendLangScannedSources(b, lib, .{
@@ -1411,6 +1415,12 @@ fn buildLibDxcompiler(b: *Build, step: *std.build.CompileStep, options: Options)
     if (options.install_libs) b.installArtifact(lib);
     linkLibDxcompilerDependencies(b, lib, options);
 
+    lib.defineCMacro("UNREFERENCED_PARAMETER(x)=", "");
+    lib.defineCMacro("MSFT_SUPPORTS_CHILD_PROCESSES", "1");
+    lib.defineCMacro("HAVE_LIBPSAPI", "1");
+    lib.defineCMacro("HAVE_LIBSHELL32", "1");
+    lib.defineCMacro("LLVM_ON_WIN32", "1");
+
     var flags = std.ArrayList([]const u8).init(b.allocator);
     try flags.appendSlice(&.{
         include("libs/"),
@@ -1420,16 +1430,11 @@ fn buildLibDxcompiler(b: *Build, step: *std.build.CompileStep, options: Options)
         include("libs/DirectXShaderCompiler/build/lib/HLSL"),
         include("libs/DirectXShaderCompiler/build/lib/DxilPIXPasses"),
         include("libs/DirectXShaderCompiler/build/include"),
-        "-DUNREFERENCED_PARAMETER(x)=",
         "-Wno-inconsistent-missing-override",
         "-Wno-missing-exception-spec",
         "-Wno-switch",
         "-Wno-deprecated-declarations",
         "-Wno-macro-redefined", // regex2.h and regcomp.c requires this for OUT redefinition
-        "-DMSFT_SUPPORTS_CHILD_PROCESSES=1",
-        "-DHAVE_LIBPSAPI=1",
-        "-DHAVE_LIBSHELL32=1",
-        "-DLLVM_ON_WIN32=1",
     });
 
     try appendLangScannedSources(b, lib, .{
