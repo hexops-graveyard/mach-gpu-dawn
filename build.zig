@@ -64,7 +64,7 @@ pub const Options = struct {
     install_libs: bool = false,
 
     /// The binary release version to use from https://github.com/hexops/mach-gpu-dawn/releases
-            binary_version: []const u8 = "release-5be6076",
+    binary_version: []const u8 = "release-5be6076",
 
     /// Detects the default options to use for the given target.
     pub fn detectDefaults(self: Options, target: std.Target) Options {
@@ -805,14 +805,14 @@ fn buildLibDawnNative(b: *Build, step: *std.build.CompileStep, options: Options)
             "benchmark",
             "mock",
             "SpirvValidation.cpp",
-            "XlibXcbFunctions.cpp",
+            "X11Functions.cpp",
             "dawn_proc.c",
         } else &.{
             "test",
             "benchmark",
             "mock",
             "SpirvValidation.cpp",
-            "XlibXcbFunctions.cpp",
+            "X11Functions.cpp",
             "dawn_proc.c",
         },
     });
@@ -863,7 +863,7 @@ fn buildLibDawnNative(b: *Build, step: *std.build.CompileStep, options: Options)
     const tag = step.target_info.target.os.tag;
     if (isLinuxDesktopLike(tag)) {
         inline for ([_][]const u8{
-            "src/dawn/native/XlibXcbFunctions.cpp",
+            "src/dawn/native/X11Functions.cpp",
         }) |path| {
             const abs_path = sdkPath("/libs/dawn/" ++ path);
             try cpp_sources.append(abs_path);
