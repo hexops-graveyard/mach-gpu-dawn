@@ -1055,6 +1055,7 @@ fn buildLibTint(b: *Build, step: *std.build.CompileStep, options: Options) !*std
             "libs/dawn/src/tint",
             "libs/dawn/src/tint/lang/core/",
             "libs/dawn/src/tint/lang/core/intrinsic/",
+            "libs/dawn/src/tint/lang/core/intrinsic/data",
             "libs/dawn/src/tint/lang/core/constant/",
             "libs/dawn/src/tint/lang/core/ir/",
             "libs/dawn/src/tint/lang/core/ir/transform/",
