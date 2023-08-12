@@ -558,8 +558,8 @@ pub fn appendFlags(step: *std.build.CompileStep, flags: *std.ArrayList([]const u
     if (debug_symbols) try flags.append("-g1") else try flags.append("-g0");
     if (is_cpp) try flags.append("-std=c++17");
     if (isLinuxDesktopLike(step.target_info.target.os.tag)) {
-        step.defineCMacro("DAWN_USE_X11", "");
-        step.defineCMacro("DAWN_USE_WAYLAND", "");
+        step.defineCMacro("DAWN_USE_X11", "1");
+        step.defineCMacro("DAWN_USE_WAYLAND", "1");
     }
 }
 
@@ -746,7 +746,6 @@ fn buildLibDawnNative(b: *Build, step: *std.build.CompileStep, options: Options)
     defineDawnEnableBackend(lib, options);
 
     // TODO(build-system): make these optional
-    lib.defineCMacro("HRESULT", "1");
     lib.defineCMacro("TINT_BUILD_SPV_READER", "1");
     lib.defineCMacro("TINT_BUILD_SPV_WRITER", "1");
     lib.defineCMacro("TINT_BUILD_WGSL_READER", "1");
@@ -938,7 +937,7 @@ fn buildLibDawnNative(b: *Build, step: *std.build.CompileStep, options: Options)
                 const abs_path = sdkPath("/libs/dawn/" ++ path);
                 try cpp_sources.append(abs_path);
             }
-            lib.defineCMacro("DAWN_USE_SYNC_FDS", "");
+            lib.defineCMacro("DAWN_USE_SYNC_FDS", "1");
         }
     }
 
@@ -1024,8 +1023,10 @@ fn buildLibTint(b: *Build, step: *std.build.CompileStep, options: Options) !*std
     if (options.install_libs) b.installArtifact(lib);
     linkLibTintDependencies(b, lib, options);
 
+    lib.defineCMacro("_HRESULT_DEFINED", "");
+    lib.defineCMacro("HRESULT", "long");
+
     // TODO(build-system): make these optional
-    lib.defineCMacro("HRESULT", "1");
     lib.defineCMacro("TINT_BUILD_SPV_READER", "1");
     lib.defineCMacro("TINT_BUILD_SPV_WRITER", "1");
     lib.defineCMacro("TINT_BUILD_WGSL_READER", "1");
@@ -1294,8 +1295,8 @@ fn buildLibAbseilCpp(b: *Build, step: *std.build.CompileStep, options: Options) 
     const target = step.target_info.target;
 
     // musl needs this defined in order for off64_t to be a type, which abseil-cpp uses
-    lib.defineCMacro("_FILE_OFFSET_BITS", "1");
-    lib.defineCMacro("_LARGEFILE64_SOURCE", "1");
+    lib.defineCMacro("_FILE_OFFSET_BITS", "64");
+    lib.defineCMacro("_LARGEFILE64_SOURCE", "");
 
     var flags = std.ArrayList([]const u8).init(b.allocator);
     try flags.appendSlice(&.{
@@ -1305,10 +1306,10 @@ fn buildLibAbseilCpp(b: *Build, step: *std.build.CompileStep, options: Options) 
     });
     if (target.os.tag == .windows) {
         lib.defineCMacro("ABSL_FORCE_THREAD_IDENTITY_MODE", "2");
-        lib.defineCMacro("WIN32_LEAN_AND_MEAN", "1");
-        lib.defineCMacro("D3D10_ARBITRARY_HEADER_ORDERING", "1");
-        lib.defineCMacro("_CRT_SECURE_NO_WARNINGS", "1");
-        lib.defineCMacro("NOMINMAX", "1");
+        lib.defineCMacro("WIN32_LEAN_AND_MEAN", "");
+        lib.defineCMacro("D3D10_ARBITRARY_HEADER_ORDERING", "");
+        lib.defineCMacro("_CRT_SECURE_NO_WARNINGS", "");
+        lib.defineCMacro("NOMINMAX", "");
         try flags.append(include("src/dawn/zig_mingw_pthread"));
     }
 
@@ -1415,7 +1416,7 @@ fn buildLibDxcompiler(b: *Build, step: *std.build.CompileStep, options: Options)
     if (options.install_libs) b.installArtifact(lib);
     linkLibDxcompilerDependencies(b, lib, options);
 
-    lib.defineCMacro("UNREFERENCED_PARAMETER(x)=", "");
+    lib.defineCMacro("UNREFERENCED_PARAMETER(x)", "");
     lib.defineCMacro("MSFT_SUPPORTS_CHILD_PROCESSES", "1");
     lib.defineCMacro("HAVE_LIBPSAPI", "1");
     lib.defineCMacro("HAVE_LIBSHELL32", "1");
