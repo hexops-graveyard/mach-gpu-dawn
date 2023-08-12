@@ -102,7 +102,7 @@ fn linkFromSource(b: *Build, step: *std.build.CompileStep, options: Options) !vo
     try ensureGitRepoCloned(b.allocator, "https://github.com/hexops/dawn", "generated-2023-08-10.1691685418", sdkPath("/libs/dawn"));
 
     // branch: mach
-    try ensureGitRepoCloned(b.allocator, "https://github.com/hexops/DirectXShaderCompiler", "11db26a61c88faa84b9b4fabb620766bfc0fd8ea", sdkPath("/libs/DirectXShaderCompiler"));
+    try ensureGitRepoCloned(b.allocator, "https://github.com/hexops/DirectXShaderCompiler", "bb5211aa247978e2ab75bea9f5c985ba3fabd269", sdkPath("/libs/DirectXShaderCompiler"));
 
     step.addIncludePath(.{ .path = sdkPath("/libs/dawn/out/Debug/gen/include") });
     step.addIncludePath(.{ .path = sdkPath("/libs/dawn/include") });
