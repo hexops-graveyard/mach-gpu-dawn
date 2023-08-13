@@ -4,12 +4,12 @@ const Build = std.Build;
 pub fn build(b: *Build) !void {
     const optimize = b.standardOptimizeOption(.{});
     const target = b.standardTargetOptions(.{});
+
+    // TODO: uncomment all this code once hexops/mach#902 is fixed, b.dependency("...") cannot
+    // be called inside `pub fn build` if we want this package to be usable via the package manager.
     _ = optimize;
     _ = target;
 
-    // TODO(build-system): Zig package manager currently can't handle transitive deps like this, so we need to use
-    // these explicitly here:
-    //
     // const options = Options{
     //     .install_libs = true,
     //     .from_source = true,
@@ -23,12 +23,6 @@ pub fn build(b: *Build) !void {
     //     .optimize = optimize,
     // });
     // try link(b, example, options);
-    // const glfw_dep = b.dependency("mach_glfw", .{
-    //     .target = example.target,
-    //     .optimize = example.optimize,
-    // });
-    // example.linkLibrary(glfw_dep.artifact("mach-glfw"));
-    // example.addModule("mach-glfw", glfw_dep.module("mach-glfw"));
     // b.installArtifact(example);
 }
 
