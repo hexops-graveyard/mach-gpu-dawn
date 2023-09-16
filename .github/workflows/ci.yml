@@ -16,7 +16,7 @@ jobs:
       - name: Setup Zig
         run: |
           sudo apt install xz-utils
-          sudo sh -c 'wget -c https://pkg.machengine.org/zig/zig-linux-x86_64-0.12.0-dev.21+ac95cfe44.tar.xz -O - | tar -xJ --strip-components=1 -C /usr/local/bin'
+          sudo sh -c 'wget -c https://pkg.machengine.org/zig/zig-linux-x86_64-0.12.0-dev.389+61b70778b.tar.xz -O - | tar -xJ --strip-components=1 -C /usr/local/bin'
       - name: update build.zig
         run: mv build.zig.local build.zig
       - name: install (debug)
@@ -37,7 +37,7 @@ jobs:
       - name: Setup Zig
         run: |
           sudo apt install xz-utils
-          sudo sh -c 'wget -c https://pkg.machengine.org/zig/zig-linux-x86_64-0.12.0-dev.21+ac95cfe44.tar.xz -O - | tar -xJ --strip-components=1 -C /usr/local/bin'
+          sudo sh -c 'wget -c https://pkg.machengine.org/zig/zig-linux-x86_64-0.12.0-dev.389+61b70778b.tar.xz -O - | tar -xJ --strip-components=1 -C /usr/local/bin'
       - name: update build.zig
         run: mv build.zig.local build.zig
       - name: install (release-fast)
@@ -58,7 +58,7 @@ jobs:
       - name: Setup Zig
         run: |
           sudo apt install xz-utils
-          sudo sh -c 'wget -c https://pkg.machengine.org/zig/zig-linux-x86_64-0.12.0-dev.21+ac95cfe44.tar.xz -O - | tar -xJ --strip-components=1 -C /usr/local/bin'
+          sudo sh -c 'wget -c https://pkg.machengine.org/zig/zig-linux-x86_64-0.12.0-dev.389+61b70778b.tar.xz -O - | tar -xJ --strip-components=1 -C /usr/local/bin'
       - name: update build.zig
         run: mv build.zig.local build.zig
       - name: install (debug)
@@ -79,7 +79,7 @@ jobs:
       - name: Setup Zig
         run: |
           sudo apt install xz-utils
-          sudo sh -c 'wget -c https://pkg.machengine.org/zig/zig-linux-x86_64-0.12.0-dev.21+ac95cfe44.tar.xz -O - | tar -xJ --strip-components=1 -C /usr/local/bin'
+          sudo sh -c 'wget -c https://pkg.machengine.org/zig/zig-linux-x86_64-0.12.0-dev.389+61b70778b.tar.xz -O - | tar -xJ --strip-components=1 -C /usr/local/bin'
       - name: update build.zig
         run: mv build.zig.local build.zig
       - name: install (release-fast)
@@ -100,7 +100,7 @@ jobs:
       - name: Setup Zig
         run: |
           sudo apt install xz-utils
-          sudo sh -c 'wget -c https://pkg.machengine.org/zig/zig-linux-x86_64-0.12.0-dev.21+ac95cfe44.tar.xz -O - | tar -xJ --strip-components=1 -C /usr/local/bin'
+          sudo sh -c 'wget -c https://pkg.machengine.org/zig/zig-linux-x86_64-0.12.0-dev.389+61b70778b.tar.xz -O - | tar -xJ --strip-components=1 -C /usr/local/bin'
       - name: update build.zig
         run: mv build.zig.local build.zig
       - name: install (debug)
@@ -121,7 +121,7 @@ jobs:
       - name: Setup Zig
         run: |
           sudo apt install xz-utils
-          sudo sh -c 'wget -c https://pkg.machengine.org/zig/zig-linux-x86_64-0.12.0-dev.21+ac95cfe44.tar.xz -O - | tar -xJ --strip-components=1 -C /usr/local/bin'
+          sudo sh -c 'wget -c https://pkg.machengine.org/zig/zig-linux-x86_64-0.12.0-dev.389+61b70778b.tar.xz -O - | tar -xJ --strip-components=1 -C /usr/local/bin'
       - name: update build.zig
         run: mv build.zig.local build.zig
       - name: install (release-fast)
@@ -142,7 +142,7 @@ jobs:
       - name: Setup Zig
         run: |
           sudo apt install xz-utils
-          sudo sh -c 'wget -c https://pkg.machengine.org/zig/zig-linux-x86_64-0.12.0-dev.21+ac95cfe44.tar.xz -O - | tar -xJ --strip-components=1 -C /usr/local/bin'
+          sudo sh -c 'wget -c https://pkg.machengine.org/zig/zig-linux-x86_64-0.12.0-dev.389+61b70778b.tar.xz -O - | tar -xJ --strip-components=1 -C /usr/local/bin'
       - name: update build.zig
         run: mv build.zig.local build.zig
       - name: install (debug)
@@ -163,7 +163,7 @@ jobs:
       - name: Setup Zig
         run: |
           sudo apt install xz-utils
-          sudo sh -c 'wget -c https://pkg.machengine.org/zig/zig-linux-x86_64-0.12.0-dev.21+ac95cfe44.tar.xz -O - | tar -xJ --strip-components=1 -C /usr/local/bin'
+          sudo sh -c 'wget -c https://pkg.machengine.org/zig/zig-linux-x86_64-0.12.0-dev.389+61b70778b.tar.xz -O - | tar -xJ --strip-components=1 -C /usr/local/bin'
       - name: update build.zig
         run: mv build.zig.local build.zig
       - name: install (release-fast)
@@ -184,10 +184,10 @@ jobs:
       - name: Setup Zig
         run: |
           $ProgressPreference = 'SilentlyContinue'
-          Invoke-WebRequest -Uri "https://pkg.machengine.org/zig/zig-windows-x86_64-0.12.0-dev.21+ac95cfe44.zip" -OutFile "C:\zig.zip"
+          Invoke-WebRequest -Uri "https://pkg.machengine.org/zig/zig-windows-x86_64-0.12.0-dev.389+61b70778b.zip" -OutFile "C:\zig.zip"
           cd C:\
           7z x zig.zip
-          Add-Content $env:GITHUB_PATH "C:\zig-windows-x86_64-0.12.0-dev.21+ac95cfe44\"
+          Add-Content $env:GITHUB_PATH "C:\zig-windows-x86_64-0.12.0-dev.389+61b70778b\"
       - name: update build.zig
         run: mv -force build.zig.local build.zig
       - name: install (debug)
@@ -210,10 +210,10 @@ jobs:
       - name: Setup Zig
         run: |
           $ProgressPreference = 'SilentlyContinue'
-          Invoke-WebRequest -Uri "https://pkg.machengine.org/zig/zig-windows-x86_64-0.12.0-dev.21+ac95cfe44.zip" -OutFile "C:\zig.zip"
+          Invoke-WebRequest -Uri "https://pkg.machengine.org/zig/zig-windows-x86_64-0.12.0-dev.389+61b70778b.zip" -OutFile "C:\zig.zip"
           cd C:\
           7z x zig.zip
-          Add-Content $env:GITHUB_PATH "C:\zig-windows-x86_64-0.12.0-dev.21+ac95cfe44\"
+          Add-Content $env:GITHUB_PATH "C:\zig-windows-x86_64-0.12.0-dev.389+61b70778b\"
       - name: update build.zig
         run: mv -force build.zig.local build.zig
       - name: install (release-fast)
@@ -237,7 +237,7 @@ jobs:
         run: |
           brew uninstall --ignore-dependencies libx11 # https://github.com/ziglang/zig/issues/11066
           brew install xz
-          sudo sh -c 'wget -c https://pkg.machengine.org/zig/zig-macos-x86_64-0.12.0-dev.21+ac95cfe44.tar.xz -O - | tar -xJ --strip-components=1 -C /usr/local/bin'
+          sudo sh -c 'wget -c https://pkg.machengine.org/zig/zig-macos-x86_64-0.12.0-dev.389+61b70778b.tar.xz -O - | tar -xJ --strip-components=1 -C /usr/local/bin'
       - name: update build.zig
         run: mv build.zig.local build.zig
       - name: install (debug)
@@ -259,7 +259,7 @@ jobs:
         run: |
           brew uninstall --ignore-dependencies libx11 # https://github.com/ziglang/zig/issues/11066
           brew install xz
-          sudo sh -c 'wget -c https://pkg.machengine.org/zig/zig-macos-x86_64-0.12.0-dev.21+ac95cfe44.tar.xz -O - | tar -xJ --strip-components=1 -C /usr/local/bin'
+          sudo sh -c 'wget -c https://pkg.machengine.org/zig/zig-macos-x86_64-0.12.0-dev.389+61b70778b.tar.xz -O - | tar -xJ --strip-components=1 -C /usr/local/bin'
       - name: update build.zig
         run: mv build.zig.local build.zig
       - name: install (release-fast)
