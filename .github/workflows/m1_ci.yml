@@ -14,8 +14,6 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v2
-      - name: update build.zig
-        run: mv build.zig.local build.zig
       - name: install (debug)
         run: zig build install -Dtarget=aarch64-macos
       - name: upload (debug)

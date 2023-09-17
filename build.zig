@@ -5,25 +5,20 @@ pub fn build(b: *Build) !void {
     const optimize = b.standardOptimizeOption(.{});
     const target = b.standardTargetOptions(.{});
 
-    // TODO: uncomment all this code once hexops/mach#902 is fixed, b.dependency("...") cannot
-    // be called inside `pub fn build` if we want this package to be usable via the package manager.
-    _ = optimize;
-    _ = target;
-
-    // const options = Options{
-    //     .install_libs = true,
-    //     .from_source = true,
-    // };
-    // // Just to demonstrate/test linking. This is not a functional example, see the mach/gpu examples
-    // // or Dawn C++ examples for functional example code.
-    // const example = b.addExecutable(.{
-    //     .name = "dawn-example",
-    //     .root_source_file = .{ .path = "src/main.zig" },
-    //     .target = target,
-    //     .optimize = optimize,
-    // });
-    // try link(b, example, options);
-    // b.installArtifact(example);
+    const options = Options{
+        .install_libs = true,
+        .from_source = true,
+    };
+    // Just to demonstrate/test linking. This is not a functional example, see the mach/gpu examples
+    // or Dawn C++ examples for functional example code.
+    const example = b.addExecutable(.{
+        .name = "dawn-example",
+        .root_source_file = .{ .path = "src/main.zig" },
+        .target = target,
+        .optimize = optimize,
+    });
+    try link(b, example, options);
+    b.installArtifact(example);
 }
 
 pub const Options = struct {
@@ -63,7 +58,7 @@ pub const Options = struct {
     install_libs: bool = false,
 
     /// The binary release version to use from https://github.com/hexops/mach-gpu-dawn/releases
-            binary_version: []const u8 = "release-d7b308b",
+    binary_version: []const u8 = "release-d7b308b",
 
     /// Detects the default options to use for the given target.
     pub fn detectDefaults(self: Options, target: std.Target) Options {
