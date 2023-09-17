@@ -17,9 +17,41 @@ pub fn build(b: *Build) !void {
         .target = target,
         .optimize = optimize,
     });
-    try link(b, example, options);
+    link(b, example, options);
     b.installArtifact(example);
+
+    const example_step = b.step("example", "Run library tests");
+    example_step.dependOn(&b.addRunArtifact(example).step);
 }
+
+pub const LinkStep = struct {
+    target: *std.build.Step.Compile,
+    options: Options,
+    step: std.build.Step,
+    b: *std.build.Builder,
+
+    pub fn init(b: *std.build.Builder, target: *std.build.Step.Compile, options: Options) *LinkStep {
+        const link_step = b.allocator.create(LinkStep) catch unreachable;
+        link_step.* = .{
+            .target = target,
+            .options = options,
+            .step = std.build.Step.init(.{
+                .id = .custom,
+                .name = "link",
+                .owner = b,
+                .makeFn = &make,
+            }),
+            .b = b,
+        };
+        return link_step;
+    }
+
+    fn make(step: *std.build.Step, prog_node: *std.Progress.Node) anyerror!void {
+        _ = prog_node;
+        const link_step = @fieldParentPtr(LinkStep, "step", step);
+        try doLink(link_step.b, link_step.target, link_step.options);
+    }
+};
 
 pub const Options = struct {
     /// Defaults to true on Windows
@@ -80,7 +112,12 @@ pub const Options = struct {
     }
 };
 
-pub fn link(b: *Build, step: *std.build.CompileStep, options: Options) !void {
+pub fn link(b: *Build, step: *std.build.CompileStep, options: Options) void {
+    var link_step = LinkStep.init(b, step, options);
+    step.step.dependOn(&link_step.step);
+}
+
+fn doLink(b: *Build, step: *std.build.CompileStep, options: Options) !void {
     const opt = options.detectDefaults(step.target_info.target);
 
     if (step.target_info.target.os.tag == .windows) @import("direct3d_headers").addLibraryPath(step);
