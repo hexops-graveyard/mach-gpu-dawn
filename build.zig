@@ -7,7 +7,7 @@ pub fn build(b: *Build) !void {
 
     const options = Options{
         .install_libs = true,
-        .from_source = true,
+        .from_source = false,
     };
     // Just to demonstrate/test linking. This is not a functional example, see the mach/gpu examples
     // or Dawn C++ examples for functional example code.
@@ -18,38 +18,37 @@ pub fn build(b: *Build) !void {
         .optimize = optimize,
     });
     link(b, example, options);
-    b.installArtifact(example);
 
-    const example_step = b.step("example", "Run library tests");
+    const example_step = b.step("dawn", "Build dawn from source");
     example_step.dependOn(&b.addRunArtifact(example).step);
 }
 
-pub const LinkStep = struct {
+pub const DownloadBinaryStep = struct {
     target: *std.build.Step.Compile,
     options: Options,
     step: std.build.Step,
     b: *std.build.Builder,
 
-    pub fn init(b: *std.build.Builder, target: *std.build.Step.Compile, options: Options) *LinkStep {
-        const link_step = b.allocator.create(LinkStep) catch unreachable;
-        link_step.* = .{
+    pub fn init(b: *std.build.Builder, target: *std.build.Step.Compile, options: Options) *DownloadBinaryStep {
+        const download_step = b.allocator.create(DownloadBinaryStep) catch unreachable;
+        download_step.* = .{
             .target = target,
             .options = options,
             .step = std.build.Step.init(.{
                 .id = .custom,
-                .name = "link",
+                .name = "download",
                 .owner = b,
                 .makeFn = &make,
             }),
             .b = b,
         };
-        return link_step;
+        return download_step;
     }
 
     fn make(step: *std.build.Step, prog_node: *std.Progress.Node) anyerror!void {
         _ = prog_node;
-        const link_step = @fieldParentPtr(LinkStep, "step", step);
-        try doLink(link_step.b, link_step.target, link_step.options);
+        const download_step = @fieldParentPtr(DownloadBinaryStep, "step", step);
+        try downloadFromBinary(download_step.b, download_step.target, download_step.options);
     }
 };
 
@@ -113,23 +112,28 @@ pub const Options = struct {
 };
 
 pub fn link(b: *Build, step: *std.build.CompileStep, options: Options) void {
-    var link_step = LinkStep.init(b, step, options);
-    step.step.dependOn(&link_step.step);
-}
-
-fn doLink(b: *Build, step: *std.build.CompileStep, options: Options) !void {
     const opt = options.detectDefaults(step.target_info.target);
 
     if (step.target_info.target.os.tag == .windows) @import("direct3d_headers").addLibraryPath(step);
     if (step.target_info.target.os.tag == .macos) @import("xcode_frameworks").addPaths(b, step);
 
-    if (options.from_source or isEnvVarTruthy(b.allocator, "DAWN_FROM_SOURCE"))
-        try linkFromSource(b, step, opt)
-    else
-        try linkFromBinary(b, step, opt);
+    if (options.from_source or isEnvVarTruthy(b.allocator, "DAWN_FROM_SOURCE")) {
+        linkFromSource(b, step, opt) catch unreachable;
+    } else {
+        // Add a build step to download Dawn binaries. This ensures it only downloads if needed,
+        // and that e.g. if you are running a different `zig build <step>` it doesn't always just
+        // download the binaries.
+        var download_step = DownloadBinaryStep.init(b, step, options);
+        step.step.dependOn(&download_step.step);
+
+        // Declare how to link against the binaries.
+        linkFromBinary(b, step, opt) catch unreachable;
+    }
 }
 
 fn linkFromSource(b: *Build, step: *std.build.CompileStep, options: Options) !void {
+    // Source scanning requires that these files actually exist on disk, so we must download them
+    // here right now if we are building from source.
     try ensureGitRepoCloned(b.allocator, "https://github.com/hexops/dawn", "generated-2023-08-10.1691685418", sdkPath("/libs/dawn"));
 
     // branch: mach
@@ -265,7 +269,7 @@ fn getGitHubBaseURLOwned(allocator: std.mem.Allocator) ![]const u8 {
     }
 }
 
-pub fn linkFromBinary(b: *Build, step: *std.build.CompileStep, options: Options) !void {
+pub fn downloadFromBinary(b: *Build, step: *std.build.CompileStep, options: Options) !void {
     const target = step.target_info.target;
     const binaries_available = switch (target.os.tag) {
         .windows => target.abi.isGnu(),
@@ -304,6 +308,18 @@ pub fn linkFromBinary(b: *Build, step: *std.build.CompileStep, options: Options)
     binary_target.glibc_version = null;
     const zig_triple = try binary_target.zigTriple(b.allocator);
     try ensureBinaryDownloaded(b.allocator, zig_triple, options.debug, target.os.tag == .windows, options.binary_version);
+}
+
+pub fn linkFromBinary(b: *Build, step: *std.build.CompileStep, options: Options) !void {
+    const target = step.target_info.target;
+
+    // Remove OS version range / glibc version from triple (we do not include that in our download
+    // URLs.)
+    var binary_target = std.zig.CrossTarget.fromTarget(target);
+    binary_target.os_version_min = .{ .none = undefined };
+    binary_target.os_version_max = .{ .none = undefined };
+    binary_target.glibc_version = null;
+    const zig_triple = try binary_target.zigTriple(b.allocator);
 
     const base_cache_dir_rel = try std.fs.path.join(b.allocator, &.{ "zig-cache", "mach", "gpu-dawn" });
     try std.fs.cwd().makePath(base_cache_dir_rel);
