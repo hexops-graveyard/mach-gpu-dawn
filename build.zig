@@ -117,7 +117,7 @@ pub fn link(b: *Build, step: *std.build.CompileStep, options: Options) void {
     step.step.dependOn(&link_step.step);
 }
 
-fn doLink(b: *Build, step: *std.build.CompileStep, options: Options) !void {
+pub fn doLink(b: *Build, step: *std.build.CompileStep, options: Options) !void {
     const opt = options.detectDefaults(step.target_info.target);
 
     if (step.target_info.target.os.tag == .windows) @import("direct3d_headers").addLibraryPath(step);
