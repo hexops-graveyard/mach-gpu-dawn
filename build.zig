@@ -269,7 +269,15 @@ fn getGitHubBaseURLOwned(allocator: std.mem.Allocator) ![]const u8 {
     }
 }
 
+var download_mutex = std.Thread.Mutex{};
+
 pub fn downloadFromBinary(b: *Build, step: *std.build.CompileStep, options: Options) !void {
+    // Zig will run build steps in parallel if possible, so if there were two invocations of
+    // link() then this function would be called in parallel. We're manipulating the FS here
+    // and so need to prevent that.
+    download_mutex.lock();
+    defer download_mutex.unlock();
+
     const target = step.target_info.target;
     const binaries_available = switch (target.os.tag) {
         .windows => target.abi.isGnu(),
@@ -410,7 +418,8 @@ fn downloadBinary(
 
     const download_dir = try std.fs.path.join(allocator, &.{ target_cache_dir, "download" });
     defer allocator.free(download_dir);
-    try std.fs.cwd().makePath(download_dir);
+    std.fs.cwd().makePath(download_dir) catch @panic(download_dir);
+    std.debug.print("download_dir: {s}\n", .{download_dir});
 
     // Replace "..." with "---" because GitHub releases has very weird restrictions on file names.
     // https://twitter.com/slimsag/status/1498025997987315713
@@ -441,7 +450,7 @@ fn downloadBinary(
     // Download and decompress libdawn
     const gz_target_file = try std.fs.path.join(allocator, &.{ download_dir, "compressed.gz" });
     defer allocator.free(gz_target_file);
-    try downloadFile(allocator, gz_target_file, download_url);
+    downloadFile(allocator, gz_target_file, download_url) catch @panic(gz_target_file);
     const target_file = try std.fs.path.join(allocator, &.{ target_cache_dir, lib_file_name });
     defer allocator.free(target_file);
     try gzipDecompress(allocator, gz_target_file, target_file);
@@ -463,13 +472,13 @@ fn downloadBinary(
         // Download and decompress headers.json.gz
         const headers_gz_target_file = try std.fs.path.join(allocator, &.{ download_dir, "headers.json.gz" });
         defer allocator.free(headers_gz_target_file);
-        try downloadFile(allocator, headers_gz_target_file, headers_download_url);
+        downloadFile(allocator, headers_gz_target_file, headers_download_url) catch @panic(headers_gz_target_file);
         const headers_target_file = try std.fs.path.join(allocator, &.{ target_cache_dir, "headers.json" });
         defer allocator.free(headers_target_file);
-        try gzipDecompress(allocator, headers_gz_target_file, headers_target_file);
+        gzipDecompress(allocator, headers_gz_target_file, headers_target_file) catch @panic(headers_target_file);
 
         // Extract headers JSON archive.
-        try extractHeaders(allocator, headers_target_file, commit_cache_dir);
+        extractHeaders(allocator, headers_target_file, commit_cache_dir) catch @panic(commit_cache_dir);
     }
 
     try std.fs.deleteTreeAbsolute(download_dir);
