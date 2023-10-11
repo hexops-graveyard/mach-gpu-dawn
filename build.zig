@@ -315,7 +315,14 @@ pub fn downloadFromBinary(b: *Build, step: *std.build.CompileStep, options: Opti
     binary_target.os_version_max = .{ .none = undefined };
     binary_target.glibc_version = null;
     const zig_triple = try binary_target.zigTriple(b.allocator);
-    try ensureBinaryDownloaded(b.allocator, zig_triple, options.debug, target.os.tag == .windows, options.binary_version);
+    try ensureBinaryDownloaded(
+        b.allocator,
+        b.cache_root.path,
+        zig_triple,
+        options.debug,
+        target.os.tag == .windows,
+        options.binary_version,
+    );
 }
 
 pub fn linkFromBinary(b: *Build, step: *std.build.CompileStep, options: Options) !void {
@@ -329,7 +336,11 @@ pub fn linkFromBinary(b: *Build, step: *std.build.CompileStep, options: Options)
     binary_target.glibc_version = null;
     const zig_triple = try binary_target.zigTriple(b.allocator);
 
-    const base_cache_dir_rel = try std.fs.path.join(b.allocator, &.{ "zig-cache", "mach", "gpu-dawn" });
+    const base_cache_dir_rel = try std.fs.path.join(b.allocator, &.{
+        b.cache_root.path orelse "zig-cache",
+        "mach",
+        "gpu-dawn",
+    });
     try std.fs.cwd().makePath(base_cache_dir_rel);
     const base_cache_dir = try std.fs.cwd().realpathAlloc(b.allocator, base_cache_dir_rel);
     const commit_cache_dir = try std.fs.path.join(b.allocator, &.{ base_cache_dir, options.binary_version });
@@ -356,6 +367,7 @@ pub fn linkFromBinary(b: *Build, step: *std.build.CompileStep, options: Options)
 
 pub fn ensureBinaryDownloaded(
     allocator: std.mem.Allocator,
+    cache_root: ?[]const u8,
     zig_triple: []const u8,
     is_debug: bool,
     is_windows: bool,
@@ -371,7 +383,7 @@ pub fn ensureBinaryDownloaded(
     //   Extract to zig-cache/mach/gpu-dawn/<git revision>/macos-aarch64/libgpu.a
     //   Remove zig-cache/mach/gpu-dawn/download
 
-    const base_cache_dir_rel = try std.fs.path.join(allocator, &.{ "zig-cache", "mach", "gpu-dawn" });
+    const base_cache_dir_rel = try std.fs.path.join(allocator, &.{ cache_root orelse "zig-cache", "mach", "gpu-dawn" });
     try std.fs.cwd().makePath(base_cache_dir_rel);
     const base_cache_dir = try std.fs.cwd().realpathAlloc(allocator, base_cache_dir_rel);
     const commit_cache_dir = try std.fs.path.join(allocator, &.{ base_cache_dir, version });
