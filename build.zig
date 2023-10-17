@@ -115,7 +115,7 @@ pub fn link(b: *Build, step: *std.build.CompileStep, options: Options) void {
     const opt = options.detectDefaults(step.target_info.target);
 
     if (step.target_info.target.os.tag == .windows) @import("direct3d_headers").addLibraryPath(step);
-    if (step.target_info.target.os.tag == .macos) @import("xcode_frameworks").addPaths(b, step);
+    if (step.target_info.target.os.tag == .macos) @import("xcode_frameworks").addPaths(step);
 
     if (options.from_source or isEnvVarTruthy(b.allocator, "DAWN_FROM_SOURCE")) {
         linkFromSource(b, step, opt) catch unreachable;
@@ -620,10 +620,11 @@ pub fn appendFlags(step: *std.build.CompileStep, flags: *std.ArrayList([]const u
 }
 
 fn linkLibDawnCommonDependencies(b: *Build, step: *std.build.CompileStep, options: Options) void {
+    _ = b;
     _ = options;
     step.linkLibCpp();
     if (step.target_info.target.os.tag == .macos) {
-        @import("xcode_frameworks").addPaths(b, step);
+        @import("xcode_frameworks").addPaths(step);
         step.linkSystemLibraryName("objc");
         step.linkFramework("Foundation");
     }
@@ -684,7 +685,7 @@ fn buildLibDawnCommon(b: *Build, step: *std.build.CompileStep, options: Options)
     var cpp_flags = std.ArrayList([]const u8).init(b.allocator);
     try cpp_flags.appendSlice(flags.items);
     try appendFlags(lib, &cpp_flags, options.debug, true);
-    lib.addCSourceFiles(cpp_sources.items, cpp_flags.items);
+    lib.addCSourceFiles(.{ .files = cpp_sources.items, .flags = cpp_flags.items });
     return lib;
 }
 
@@ -728,7 +729,7 @@ fn buildLibDawnPlatform(b: *Build, step: *std.build.CompileStep, options: Option
         try cpp_sources.append(abs_path);
     }
 
-    lib.addCSourceFiles(cpp_sources.items, cpp_flags.items);
+    lib.addCSourceFiles(.{ .files = cpp_sources.items, .flags = cpp_flags.items });
     return lib;
 }
 
@@ -758,7 +759,7 @@ fn linkLibDawnNativeDependencies(b: *Build, step: *std.build.CompileStep, option
         }).artifact("direct3d-headers"));
     }
     if (options.metal.?) {
-        @import("xcode_frameworks").addPaths(b, step);
+        @import("xcode_frameworks").addPaths(step);
         step.linkSystemLibraryName("objc");
         step.linkFramework("Metal");
         step.linkFramework("CoreGraphics");
@@ -1055,7 +1056,7 @@ fn buildLibDawnNative(b: *Build, step: *std.build.CompileStep, options: Options)
     var cpp_flags = std.ArrayList([]const u8).init(b.allocator);
     try cpp_flags.appendSlice(flags.items);
     try appendFlags(lib, &cpp_flags, options.debug, true);
-    lib.addCSourceFiles(cpp_sources.items, cpp_flags.items);
+    lib.addCSourceFiles(.{ .files = cpp_sources.items, .flags = cpp_flags.items });
     return lib;
 }
 
@@ -1243,7 +1244,7 @@ fn buildLibTint(b: *Build, step: *std.build.CompileStep, options: Options) !*std
     var cpp_flags = std.ArrayList([]const u8).init(b.allocator);
     try cpp_flags.appendSlice(flags.items);
     try appendFlags(lib, &cpp_flags, options.debug, true);
-    lib.addCSourceFiles(cpp_sources.items, cpp_flags.items);
+    lib.addCSourceFiles(.{ .files = cpp_sources.items, .flags = cpp_flags.items });
     return lib;
 }
 
@@ -1318,11 +1319,12 @@ fn buildLibSPIRVTools(b: *Build, step: *std.build.CompileStep, options: Options)
 }
 
 fn linkLibAbseilCppDependencies(b: *Build, step: *std.build.CompileStep, options: Options) void {
+    _ = b;
     _ = options;
     step.linkLibCpp();
     const target = step.target_info.target;
     if (target.os.tag == .macos) {
-        @import("xcode_frameworks").addPaths(b, step);
+        @import("xcode_frameworks").addPaths(step);
         step.linkSystemLibraryName("objc");
         step.linkFramework("CoreFoundation");
     }
@@ -1602,7 +1604,7 @@ fn appendScannedSources(b: *Build, step: *std.build.CompileStep, args: struct {
     for (args.rel_dirs) |rel_dir| {
         try scanSources(b, &sources, rel_dir, args.extensions, args.excluding, args.excluding_contains);
     }
-    step.addCSourceFiles(sources.items, args.flags);
+    step.addCSourceFiles(.{ .files = sources.items, .flags = args.flags });
 }
 
 /// Scans rel_dir for sources ending with one of the provided extensions, excluding relative paths

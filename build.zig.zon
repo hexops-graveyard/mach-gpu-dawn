@@ -1,22 +1,32 @@
 .{
     .name = "mach-gpu-dawn",
     .version = "0.2.0",
+    .paths = .{
+        "dev",
+        "src",
+        "build.zig",
+        "build.zig.zon",
+        "LICENSE",
+        "LICENSE-APACHE",
+        "LICENSE-MIT",
+        "README.md",
+    },
     .dependencies = .{
         .xcode_frameworks = .{
-            .url = "https://github.com/hexops/xcode-frameworks-pkg/archive/f8b854f9a1f4b4602b4f998ee42588d524d44e52.tar.gz",
-            .hash = "1220ab440d1b8484038d619f743ef6a71e3683d13152eae941aa2d6bcb12fcea3135",
+            .url = "https://pkg.machengine.org/xcode-frameworks/e77a5c6809a0d3f62ec549ee56e9d2dc6807cd5b.tar.gz",
+            .hash = "12202044ed9fd69af156b0afde619ffd1d111554c557f57ab670ca9960e76d60d0b8",
         },
         .direct3d_headers = .{
-            .url = "https://pkg.machengine.org/direct3d-headers/563ee4b888784df0614c1bb9c8fc9fc48fa18f2a.tar.gz",
-            .hash = "1220c7fc160384063b9584c6dc766cfcc9a06a392f7549c40cb2ec94e50d9d5110ae",
+            .url = "https://pkg.machengine.org/direct3d-headers/9617cfd497fae598610a7b0a4be0b035e7308e93.tar.gz",
+            .hash = "122098cc0b0a39d24aaffcd6d5556e8f31f5dd1a754559ffa468918f2ed6c1ad0a03",
         },
         .vulkan_headers = .{
-            .url = "https://pkg.machengine.org/vulkan-headers/fc495148a910ac7817ce0ec2d5948231806f2ac0.tar.gz",
-            .hash = "12209aeba80369fa8638b82179b47e6742adb98a3a5b01bc518565504a922baad3e4",
+            .url = "https://pkg.machengine.org/vulkan-headers/1feb2d841870f7461c28b95549cb707440226138.tar.gz",
+            .hash = "12209e716013e33618aaf5d915c6f2d196922b36aa16e06b52d7c28eafb2b3da0f4e",
         },
         .x11_headers = .{
-            .url = "https://pkg.machengine.org/x11-headers/26d12e9fc0d893085bcb711088a4a19afdff1adc.tar.gz",
-            .hash = "1220371a61d8bb57fce8ee1741f623cc19b0edd7d1b4adc9918663f8a7ef08aa4f3f",
+            .url = "https://pkg.machengine.org/x11-headers/d5594ef666e51b2531511a15db03b5439e4c11e5.tar.gz",
+            .hash = "12208aaa9355611470ae1357dfa2fd8c86e61679c2a9d343a8afaf25d3826a893111",
         },
     },
 }
