@@ -12,7 +12,7 @@ pub fn build(b: *Build) !void {
     // Just to demonstrate/test linking. This is not a functional example, see the mach/gpu examples
     // or Dawn C++ examples for functional example code.
     const example = b.addExecutable(.{
-        .name = "dawn-example",
+        .name = "empty",
         .root_source_file = .{ .path = "src/main.zig" },
         .target = target,
         .optimize = optimize,

@@ -13,8 +13,8 @@
     },
     .dependencies = .{
         .xcode_frameworks = .{
-            .url = "https://pkg.machengine.org/xcode-frameworks/e77a5c6809a0d3f62ec549ee56e9d2dc6807cd5b.tar.gz",
-            .hash = "12202044ed9fd69af156b0afde619ffd1d111554c557f57ab670ca9960e76d60d0b8",
+            .url = "https://pkg.machengine.org/xcode-frameworks/1b5863a77384f3ac633b496cf6decbf42ceb1ed2.tar.gz",
+            .hash = "12209ccfa1c7320f1d4eed0baf718efa9b4c8d8e42595a019a7569c2adf48d27c262",
         },
         .direct3d_headers = .{
             .url = "https://pkg.machengine.org/direct3d-headers/9617cfd497fae598610a7b0a4be0b035e7308e93.tar.gz",
