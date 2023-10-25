@@ -89,7 +89,7 @@ pub const Options = struct {
     install_libs: bool = false,
 
     /// The binary release version to use from https://github.com/hexops/mach-gpu-dawn/releases
-            binary_version: []const u8 = "release-06bc1ed",
+    binary_version: []const u8 = "release-06bc1ed",
 
     /// Detects the default options to use for the given target.
     pub fn detectDefaults(self: Options, target: std.Target) Options {
@@ -363,6 +363,13 @@ pub fn linkFromBinary(b: *Build, step: *std.build.CompileStep, options: Options)
     linkLibAbseilCppDependencies(b, step, options);
     linkLibDawnWireDependencies(b, step, options);
     linkLibDxcompilerDependencies(b, step, options);
+
+    // Transitive dependencies, explicit linkage of these works around
+    // ziglang/zig#17130
+    if (step.target_info.target.os.tag == .macos) {
+        step.linkFramework("CoreImage");
+        step.linkFramework("CoreVideo");
+    }
 }
 
 pub fn ensureBinaryDownloaded(
