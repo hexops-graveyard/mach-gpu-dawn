@@ -89,7 +89,7 @@ pub const Options = struct {
     install_libs: bool = false,
 
     /// The binary release version to use from https://github.com/hexops/mach-gpu-dawn/releases
-            binary_version: []const u8 = "release-",
+    binary_version: []const u8 = "release-16b234c",
 
     /// Detects the default options to use for the given target.
     pub fn detectDefaults(self: Options, target: std.Target) Options {
@@ -224,7 +224,7 @@ fn exec(allocator: std.mem.Allocator, argv: []const []const u8, cwd: []const u8)
 }
 
 fn getCurrentGitRevision(allocator: std.mem.Allocator, cwd: []const u8) ![]const u8 {
-    const result = try std.ChildProcess.exec(.{ .allocator = allocator, .argv = &.{ "git", "rev-parse", "HEAD" }, .cwd = cwd });
+    const result = try std.ChildProcess.run(.{ .allocator = allocator, .argv = &.{ "git", "rev-parse", "HEAD" }, .cwd = cwd });
     allocator.free(result.stderr);
     if (result.stdout.len > 0) return result.stdout[0 .. result.stdout.len - 1]; // trim newline
     return result.stdout;
@@ -232,7 +232,7 @@ fn getCurrentGitRevision(allocator: std.mem.Allocator, cwd: []const u8) ![]const
 
 fn ensureGit(allocator: std.mem.Allocator) void {
     const argv = &[_][]const u8{ "git", "--version" };
-    const result = std.ChildProcess.exec(.{
+    const result = std.ChildProcess.run(.{
         .allocator = allocator,
         .argv = argv,
         .cwd = ".",
@@ -433,8 +433,6 @@ fn downloadBinary(
     is_windows: bool,
     version: []const u8,
 ) !void {
-    ensureCanDownloadFiles(allocator);
-
     const download_dir = try std.fs.path.join(allocator, &.{ target_cache_dir, "download" });
     defer allocator.free(download_dir);
     std.fs.cwd().makePath(download_dir) catch @panic(download_dir);
@@ -547,7 +545,7 @@ fn gzipDecompress(allocator: std.mem.Allocator, src_absolute_path: []const u8, d
 }
 
 fn gitBranchContainsCommit(allocator: std.mem.Allocator, branch: []const u8, commit: []const u8) !bool {
-    const result = try std.ChildProcess.exec(.{
+    const result = try std.ChildProcess.run(.{
         .allocator = allocator,
         .argv = &.{ "git", "branch", branch, "--contains", commit },
         .cwd = sdkPath("/"),
@@ -560,7 +558,7 @@ fn gitBranchContainsCommit(allocator: std.mem.Allocator, branch: []const u8, com
 }
 
 fn getCurrentGitCommit(allocator: std.mem.Allocator) ![]const u8 {
-    const result = try std.ChildProcess.exec(.{
+    const result = try std.ChildProcess.run(.{
         .allocator = allocator,
         .argv = &.{ "git", "rev-parse", "HEAD" },
         .cwd = sdkPath("/"),
@@ -571,7 +569,7 @@ fn getCurrentGitCommit(allocator: std.mem.Allocator) ![]const u8 {
 }
 
 fn gitClone(allocator: std.mem.Allocator, repository: []const u8, dir: []const u8) !bool {
-    const result = try std.ChildProcess.exec(.{
+    const result = try std.ChildProcess.run(.{
         .allocator = allocator,
         .argv = &.{ "git", "clone", repository, dir },
         .cwd = sdkPath("/"),
@@ -583,38 +581,18 @@ fn gitClone(allocator: std.mem.Allocator, repository: []const u8, dir: []const u
     return result.term.Exited == 0;
 }
 
-fn downloadFile(allocator: std.mem.Allocator, target_file: []const u8, url: []const u8) !void {
+fn downloadFile(allocator: std.mem.Allocator, target_file_path: []const u8, url: []const u8) !void {
     std.debug.print("downloading {s}..\n", .{url});
 
-    // Some Windows users experience `SSL certificate problem: unable to get local issuer certificate`
-    // so we give them the option to disable SSL if they desire / don't want to debug the issue.
-    var child = if (isEnvVarTruthy(allocator, "CURL_INSECURE"))
-        std.ChildProcess.init(&.{ "curl", "--insecure", "-L", "-o", target_file, url }, allocator)
-    else
-        std.ChildProcess.init(&.{ "curl", "-L", "-o", target_file, url }, allocator);
-    child.cwd = sdkPath("/");
-    child.stderr = std.io.getStdErr();
-    child.stdout = std.io.getStdOut();
-    _ = try child.spawnAndWait();
-}
+    const target_file = try std.fs.cwd().createFile(target_file_path, .{});
 
-fn ensureCanDownloadFiles(allocator: std.mem.Allocator) void {
-    const result = std.ChildProcess.exec(.{
-        .allocator = allocator,
-        .argv = &.{ "curl", "--version" },
-        .cwd = sdkPath("/"),
-    }) catch { // e.g. FileNotFound
-        std.log.err("mach: error: 'curl --version' failed. Is curl not installed?", .{});
-        std.process.exit(1);
-    };
-    defer {
-        allocator.free(result.stderr);
-        allocator.free(result.stdout);
-    }
-    if (result.term.Exited != 0) {
-        std.log.err("mach: error: 'curl --version' failed. Is curl not installed?", .{});
-        std.process.exit(1);
-    }
+    var client: std.http.Client = .{ .allocator = allocator };
+    defer client.deinit();
+    var fetch_res = try client.fetch(allocator, .{
+        .location = .{ .url = url },
+        .response_strategy = .{ .file = target_file },
+    });
+    fetch_res.deinit();
 }
 
 fn isLinuxDesktopLike(tag: std.Target.Os.Tag) bool {
