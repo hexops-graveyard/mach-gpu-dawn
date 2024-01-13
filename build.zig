@@ -372,6 +372,54 @@ pub fn linkFromBinary(b: *std.Build, step: *std.Build.Step.Compile, options: Opt
     }
 }
 
+pub fn addPathsToModule(b: *std.Build, module: *std.Build.Module, options: Options) void {
+    const target = (module.resolved_target orelse b.host).result;
+    const opt = options.detectDefaults(target);
+
+    if (options.from_source or isEnvVarTruthy(b.allocator, "DAWN_FROM_SOURCE")) {
+        addPathsToModuleFromSource(b, module, opt) catch unreachable;
+    } else {
+        addPathsToModuleFromBinary(b, module, opt) catch unreachable;
+    }
+}
+
+pub fn addPathsToModuleFromSource(b: *std.Build, module: *std.Build.Module, options: Options) !void {
+    _ = b;
+    _ = options;
+
+    module.addIncludePath(.{ .path = sdkPath("/libs/dawn/out/Debug/gen/include") });
+    module.addIncludePath(.{ .path = sdkPath("/libs/dawn/include") });
+    module.addIncludePath(.{ .path = sdkPath("/src/dawn") });
+}
+
+pub fn addPathsToModuleFromBinary(b: *std.Build, module: *std.Build.Module, options: Options) !void {
+    const target = (module.resolved_target orelse b.host).result;
+
+    // Remove OS version range / glibc version from triple (we do not include that in our download
+    // URLs.)
+    var binary_target = std.zig.CrossTarget.fromTarget(target);
+    binary_target.os_version_min = .{ .none = undefined };
+    binary_target.os_version_max = .{ .none = undefined };
+    binary_target.glibc_version = null;
+    const zig_triple = try binary_target.zigTriple(b.allocator);
+
+    const base_cache_dir_rel = try std.fs.path.join(b.allocator, &.{
+        b.cache_root.path orelse "zig-cache",
+        "mach",
+        "gpu-dawn",
+    });
+    try std.fs.cwd().makePath(base_cache_dir_rel);
+    const base_cache_dir = try std.fs.cwd().realpathAlloc(b.allocator, base_cache_dir_rel);
+    const commit_cache_dir = try std.fs.path.join(b.allocator, &.{ base_cache_dir, options.binary_version });
+    const release_tag = if (options.debug) "debug" else "release-fast";
+    const target_cache_dir = try std.fs.path.join(b.allocator, &.{ commit_cache_dir, zig_triple, release_tag });
+    _ = target_cache_dir;
+    const include_dir = try std.fs.path.join(b.allocator, &.{ commit_cache_dir, "include" });
+
+    module.addIncludePath(.{ .path = include_dir });
+    module.addIncludePath(.{ .path = sdkPath("/src/dawn") });
+}
+
 pub fn ensureBinaryDownloaded(
     allocator: std.mem.Allocator,
     cache_root: ?[]const u8,
