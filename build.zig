@@ -1,7 +1,6 @@
 const std = @import("std");
-const Build = std.Build;
 
-pub fn build(b: *Build) !void {
+pub fn build(b: *std.Build) !void {
     const optimize = b.standardOptimizeOption(.{});
     const target = b.standardTargetOptions(.{});
 
@@ -24,17 +23,17 @@ pub fn build(b: *Build) !void {
 }
 
 pub const DownloadBinaryStep = struct {
-    target: *std.build.Step.Compile,
+    target: *std.Build.Step.Compile,
     options: Options,
-    step: std.build.Step,
-    b: *std.build.Builder,
+    step: std.Build.Step,
+    b: *std.Build,
 
-    pub fn init(b: *std.build.Builder, target: *std.build.Step.Compile, options: Options) *DownloadBinaryStep {
+    pub fn init(b: *std.Build, target: *std.Build.Step.Compile, options: Options) *DownloadBinaryStep {
         const download_step = b.allocator.create(DownloadBinaryStep) catch unreachable;
         download_step.* = .{
             .target = target,
             .options = options,
-            .step = std.build.Step.init(.{
+            .step = std.Build.Step.init(.{
                 .id = .custom,
                 .name = "download",
                 .owner = b,
@@ -45,7 +44,7 @@ pub const DownloadBinaryStep = struct {
         return download_step;
     }
 
-    fn make(step: *std.build.Step, prog_node: *std.Progress.Node) anyerror!void {
+    fn make(step: *std.Build.Step, prog_node: *std.Progress.Node) anyerror!void {
         _ = prog_node;
         const download_step = @fieldParentPtr(DownloadBinaryStep, "step", step);
         try downloadFromBinary(download_step.b, download_step.target, download_step.options);
@@ -111,11 +110,12 @@ pub const Options = struct {
     }
 };
 
-pub fn link(b: *Build, step: *std.build.CompileStep, options: Options) void {
-    const opt = options.detectDefaults(step.target_info.target);
+pub fn link(b: *std.Build, step: *std.Build.Step.Compile, options: Options) void {
+    const target = step.rootModuleTarget();
+    const opt = options.detectDefaults(target);
 
-    if (step.target_info.target.os.tag == .windows) @import("direct3d_headers").addLibraryPath(step);
-    if (step.target_info.target.os.tag == .macos) @import("xcode_frameworks").addPaths(step);
+    if (target.os.tag == .windows) @import("direct3d_headers").addLibraryPath(step);
+    if (target.os.tag == .macos) @import("xcode_frameworks").addPaths(step);
 
     if (options.from_source or isEnvVarTruthy(b.allocator, "DAWN_FROM_SOURCE")) {
         linkFromSource(b, step, opt) catch unreachable;
@@ -131,7 +131,7 @@ pub fn link(b: *Build, step: *std.build.CompileStep, options: Options) void {
     }
 }
 
-fn linkFromSource(b: *Build, step: *std.build.CompileStep, options: Options) !void {
+fn linkFromSource(b: *std.Build, step: *std.Build.Step.Compile, options: Options) !void {
     // Source scanning requires that these files actually exist on disk, so we must download them
     // here right now if we are building from source.
     try ensureGitRepoCloned(b.allocator, "https://github.com/hexops/dawn", "generated-2023-08-10.1691685418", sdkPath("/libs/dawn"));
@@ -169,11 +169,11 @@ fn linkFromSource(b: *Build, step: *std.build.CompileStep, options: Options) !vo
 
     const lib_dawn = if (options.shared_libs) b.addSharedLibrary(.{
         .name = "dawn",
-        .target = step.target,
+        .target = step.root_module.resolved_target.?,
         .optimize = if (options.debug) .Debug else .ReleaseFast,
     }) else b.addStaticLibrary(.{
         .name = "dawn",
-        .target = step.target,
+        .target = step.root_module.resolved_target.?,
         .optimize = if (options.debug) .Debug else .ReleaseFast,
     });
     step.linkLibrary(lib_dawn);
@@ -271,14 +271,14 @@ fn getGitHubBaseURLOwned(allocator: std.mem.Allocator) ![]const u8 {
 
 var download_mutex = std.Thread.Mutex{};
 
-pub fn downloadFromBinary(b: *Build, step: *std.build.CompileStep, options: Options) !void {
+pub fn downloadFromBinary(b: *std.Build, step: *std.Build.Step.Compile, options: Options) !void {
     // Zig will run build steps in parallel if possible, so if there were two invocations of
     // link() then this function would be called in parallel. We're manipulating the FS here
     // and so need to prevent that.
     download_mutex.lock();
     defer download_mutex.unlock();
 
-    const target = step.target_info.target;
+    const target = step.rootModuleTarget();
     const binaries_available = switch (target.os.tag) {
         .windows => target.abi.isGnu(),
         .linux => (target.cpu.arch.isX86() or target.cpu.arch.isAARCH64()) and (target.abi.isGnu() or target.abi.isMusl()),
@@ -325,8 +325,8 @@ pub fn downloadFromBinary(b: *Build, step: *std.build.CompileStep, options: Opti
     );
 }
 
-pub fn linkFromBinary(b: *Build, step: *std.build.CompileStep, options: Options) !void {
-    const target = step.target_info.target;
+pub fn linkFromBinary(b: *std.Build, step: *std.Build.Step.Compile, options: Options) !void {
+    const target = step.rootModuleTarget();
 
     // Remove OS version range / glibc version from triple (we do not include that in our download
     // URLs.)
@@ -349,7 +349,7 @@ pub fn linkFromBinary(b: *Build, step: *std.build.CompileStep, options: Options)
     const include_dir = try std.fs.path.join(b.allocator, &.{ commit_cache_dir, "include" });
 
     step.addLibraryPath(.{ .path = target_cache_dir });
-    step.linkSystemLibraryName("dawn");
+    step.linkSystemLibrary("dawn");
     step.linkLibCpp();
 
     step.addIncludePath(.{ .path = include_dir });
@@ -366,7 +366,7 @@ pub fn linkFromBinary(b: *Build, step: *std.build.CompileStep, options: Options)
 
     // Transitive dependencies, explicit linkage of these works around
     // ziglang/zig#17130
-    if (step.target_info.target.os.tag == .macos) {
+    if (target.os.tag == .macos) {
         step.linkFramework("CoreImage");
         step.linkFramework("CoreVideo");
     }
@@ -607,43 +607,44 @@ fn isLinuxDesktopLike(tag: std.Target.Os.Tag) bool {
     };
 }
 
-pub fn appendFlags(step: *std.build.CompileStep, flags: *std.ArrayList([]const u8), debug_symbols: bool, is_cpp: bool) !void {
+pub fn appendFlags(step: *std.Build.Step.Compile, flags: *std.ArrayList([]const u8), debug_symbols: bool, is_cpp: bool) !void {
     if (debug_symbols) try flags.append("-g1") else try flags.append("-g0");
     if (is_cpp) try flags.append("-std=c++17");
-    if (isLinuxDesktopLike(step.target_info.target.os.tag)) {
+    if (isLinuxDesktopLike(step.rootModuleTarget().os.tag)) {
         step.defineCMacro("DAWN_USE_X11", "1");
         step.defineCMacro("DAWN_USE_WAYLAND", "1");
     }
 }
 
-fn linkLibDawnCommonDependencies(b: *Build, step: *std.build.CompileStep, options: Options) void {
+fn linkLibDawnCommonDependencies(b: *std.Build, step: *std.Build.Step.Compile, options: Options) void {
     _ = b;
     _ = options;
     step.linkLibCpp();
-    if (step.target_info.target.os.tag == .macos) {
+    if (step.rootModuleTarget().os.tag == .macos) {
         @import("xcode_frameworks").addPaths(step);
-        step.linkSystemLibraryName("objc");
+        step.linkSystemLibrary("objc");
         step.linkFramework("Foundation");
     }
 }
 
 // Builds common sources; derived from src/common/BUILD.gn
-fn buildLibDawnCommon(b: *Build, step: *std.build.CompileStep, options: Options) !*std.build.CompileStep {
+fn buildLibDawnCommon(b: *std.Build, step: *std.Build.Step.Compile, options: Options) !*std.Build.Step.Compile {
+    const target = step.rootModuleTarget();
     const lib = if (!options.separate_libs) step else if (options.shared_libs) b.addSharedLibrary(.{
         .name = "dawn-common",
-        .target = step.target,
+        .target = step.root_module.resolved_target.?,
         .optimize = if (options.debug) .Debug else .ReleaseFast,
     }) else b.addStaticLibrary(.{
         .name = "dawn-common",
-        .target = step.target,
+        .target = step.root_module.resolved_target.?,
         .optimize = if (options.debug) .Debug else .ReleaseFast,
     });
     if (options.install_libs) b.installArtifact(lib);
     linkLibDawnCommonDependencies(b, lib, options);
 
-    if (lib.target_info.target.os.tag == .linux) lib.linkLibrary(b.dependency("x11_headers", .{
-        .target = lib.target,
-        .optimize = lib.optimize,
+    if (target.os.tag == .linux) lib.linkLibrary(b.dependency("x11_headers", .{
+        .target = step.root_module.resolved_target.?,
+        .optimize = lib.root_module.optimize.?,
     }).artifact("x11-headers"));
 
     defineDawnEnableBackend(lib, options);
@@ -669,12 +670,12 @@ fn buildLibDawnCommon(b: *Build, step: *std.build.CompileStep, options: Options)
     });
 
     var cpp_sources = std.ArrayList([]const u8).init(b.allocator);
-    if (step.target_info.target.os.tag == .macos) {
+    if (target.os.tag == .macos) {
         // TODO(build-system): pass system SDK options through
         const abs_path = sdkPath("/libs/dawn/src/dawn/common/SystemUtils_mac.mm");
         try cpp_sources.append(abs_path);
     }
-    if (step.target_info.target.os.tag == .windows) {
+    if (target.os.tag == .windows) {
         const abs_path = sdkPath("/libs/dawn/src/dawn/common/WindowsUtils.cpp");
         try cpp_sources.append(abs_path);
     }
@@ -686,21 +687,21 @@ fn buildLibDawnCommon(b: *Build, step: *std.build.CompileStep, options: Options)
     return lib;
 }
 
-fn linkLibDawnPlatformDependencies(b: *Build, step: *std.build.CompileStep, options: Options) void {
+fn linkLibDawnPlatformDependencies(b: *std.Build, step: *std.Build.Step.Compile, options: Options) void {
     _ = b;
     _ = options;
     step.linkLibCpp();
 }
 
 // Build dawn platform sources; derived from src/dawn/platform/BUILD.gn
-fn buildLibDawnPlatform(b: *Build, step: *std.build.CompileStep, options: Options) !*std.build.CompileStep {
+fn buildLibDawnPlatform(b: *std.Build, step: *std.Build.Step.Compile, options: Options) !*std.Build.Step.Compile {
     const lib = if (!options.separate_libs) step else if (options.shared_libs) b.addSharedLibrary(.{
         .name = "dawn-platform",
-        .target = step.target,
+        .target = step.root_module.resolved_target.?,
         .optimize = if (options.debug) .Debug else .ReleaseFast,
     }) else b.addStaticLibrary(.{
         .name = "dawn-platform",
-        .target = step.target,
+        .target = step.root_module.resolved_target.?,
         .optimize = if (options.debug) .Debug else .ReleaseFast,
     });
     if (options.install_libs) b.installArtifact(lib);
@@ -730,7 +731,7 @@ fn buildLibDawnPlatform(b: *Build, step: *std.build.CompileStep, options: Option
     return lib;
 }
 
-fn defineDawnEnableBackend(step: *std.build.CompileStep, options: Options) void {
+fn defineDawnEnableBackend(step: *std.Build.Step.Compile, options: Options) void {
     step.defineCMacro("DAWN_ENABLE_BACKEND_NULL", "1");
     // TODO: support the Direct3D 11 backend
     // if (options.d3d11.?) step.defineCMacro("DAWN_ENABLE_BACKEND_D3D11", "1");
@@ -747,17 +748,18 @@ fn defineDawnEnableBackend(step: *std.build.CompileStep, options: Options) void 
     }
 }
 
-fn linkLibDawnNativeDependencies(b: *Build, step: *std.build.CompileStep, options: Options) void {
+fn linkLibDawnNativeDependencies(b: *std.Build, step: *std.Build.Step.Compile, options: Options) void {
     step.linkLibCpp();
     if (options.d3d12.?) {
         step.linkLibrary(b.dependency("direct3d_headers", .{
-            .target = step.target,
-            .optimize = step.optimize,
+            .target = step.root_module.resolved_target.?,
+            .optimize = step.root_module.optimize.?,
         }).artifact("direct3d-headers"));
+        @import("direct3d_headers").addLibraryPath(step);
     }
     if (options.metal.?) {
         @import("xcode_frameworks").addPaths(step);
-        step.linkSystemLibraryName("objc");
+        step.linkSystemLibrary("objc");
         step.linkFramework("Metal");
         step.linkFramework("CoreGraphics");
         step.linkFramework("Foundation");
@@ -768,26 +770,27 @@ fn linkLibDawnNativeDependencies(b: *Build, step: *std.build.CompileStep, option
 }
 
 // Builds dawn native sources; derived from src/dawn/native/BUILD.gn
-fn buildLibDawnNative(b: *Build, step: *std.build.CompileStep, options: Options) !*std.build.CompileStep {
+fn buildLibDawnNative(b: *std.Build, step: *std.Build.Step.Compile, options: Options) !*std.Build.Step.Compile {
+    const target = step.rootModuleTarget();
     const lib = if (!options.separate_libs) step else if (options.shared_libs) b.addSharedLibrary(.{
         .name = "dawn-native",
-        .target = step.target,
+        .target = step.root_module.resolved_target.?,
         .optimize = if (options.debug) .Debug else .ReleaseFast,
     }) else b.addStaticLibrary(.{
         .name = "dawn-native",
-        .target = step.target,
+        .target = step.root_module.resolved_target.?,
         .optimize = if (options.debug) .Debug else .ReleaseFast,
     });
     if (options.install_libs) b.installArtifact(lib);
     linkLibDawnNativeDependencies(b, lib, options);
 
     if (options.vulkan.?) lib.linkLibrary(b.dependency("vulkan_headers", .{
-        .target = lib.target,
-        .optimize = lib.optimize,
+        .target = step.root_module.resolved_target.?,
+        .optimize = lib.root_module.optimize.?,
     }).artifact("vulkan-headers"));
-    if (lib.target_info.target.os.tag == .linux) lib.linkLibrary(b.dependency("x11_headers", .{
-        .target = lib.target,
-        .optimize = lib.optimize,
+    if (target.os.tag == .linux) lib.linkLibrary(b.dependency("x11_headers", .{
+        .target = step.root_module.resolved_target.?,
+        .optimize = lib.root_module.optimize.?,
     }).artifact("x11-headers"));
 
     // MacOS: this must be defined for macOS 13.3 and older.
@@ -818,6 +821,7 @@ fn buildLibDawnNative(b: *Build, step: *std.build.CompileStep, options: Options)
         include("libs/dawn/third_party/khronos"),
 
         "-Wno-deprecated-declarations",
+        "-Wno-deprecated-builtins",
         include("libs/dawn/third_party/abseil-cpp"),
 
         include("libs/dawn/"),
@@ -916,8 +920,7 @@ fn buildLibDawnNative(b: *Build, step: *std.build.CompileStep, options: Options)
         });
     }
 
-    const tag = step.target_info.target.os.tag;
-    if (isLinuxDesktopLike(tag)) {
+    if (isLinuxDesktopLike(target.os.tag)) {
         inline for ([_][]const u8{
             "src/dawn/native/X11Functions.cpp",
         }) |path| {
@@ -967,7 +970,7 @@ fn buildLibDawnNative(b: *Build, step: *std.build.CompileStep, options: Options)
         try cpp_sources.append(sdkPath("/libs/dawn/" ++ "src/dawn/native/vulkan/external_semaphore/SemaphoreService.cpp"));
         try cpp_sources.append(sdkPath("/libs/dawn/" ++ "src/dawn/native/vulkan/external_semaphore/SemaphoreServiceImplementation.cpp"));
 
-        if (isLinuxDesktopLike(tag)) {
+        if (isLinuxDesktopLike(target.os.tag)) {
             inline for ([_][]const u8{
                 "src/dawn/native/vulkan/external_memory/MemoryServiceImplementationOpaqueFD.cpp",
                 "src/dawn/native/vulkan/external_semaphore/SemaphoreServiceImplementationFD.cpp",
@@ -975,7 +978,7 @@ fn buildLibDawnNative(b: *Build, step: *std.build.CompileStep, options: Options)
                 const abs_path = sdkPath("/libs/dawn/" ++ path);
                 try cpp_sources.append(abs_path);
             }
-        } else if (tag == .fuchsia) {
+        } else if (target.os.tag == .fuchsia) {
             inline for ([_][]const u8{
                 "src/dawn/native/vulkan/external_memory/MemoryServiceImplementationZirconHandle.cpp",
                 "src/dawn/native/vulkan/external_semaphore/SemaphoreServiceImplementationZirconHandle.cpp",
@@ -983,7 +986,7 @@ fn buildLibDawnNative(b: *Build, step: *std.build.CompileStep, options: Options)
                 const abs_path = sdkPath("/libs/dawn/" ++ path);
                 try cpp_sources.append(abs_path);
             }
-        } else if (step.target_info.target.isAndroid()) {
+        } else if (target.isAndroid()) {
             inline for ([_][]const u8{
                 "src/dawn/native/vulkan/external_memory/MemoryServiceImplementationAHardwareBuffer.cpp",
                 "src/dawn/native/vulkan/external_semaphore/SemaphoreServiceImplementationFD.cpp",
@@ -1057,21 +1060,22 @@ fn buildLibDawnNative(b: *Build, step: *std.build.CompileStep, options: Options)
     return lib;
 }
 
-fn linkLibTintDependencies(b: *Build, step: *std.build.CompileStep, options: Options) void {
+fn linkLibTintDependencies(b: *std.Build, step: *std.Build.Step.Compile, options: Options) void {
     _ = b;
     _ = options;
     step.linkLibCpp();
 }
 
 // Builds tint sources; derived from src/tint/BUILD.gn
-fn buildLibTint(b: *Build, step: *std.build.CompileStep, options: Options) !*std.build.CompileStep {
+fn buildLibTint(b: *std.Build, step: *std.Build.Step.Compile, options: Options) !*std.Build.Step.Compile {
+    const target = step.rootModuleTarget();
     const lib = if (!options.separate_libs) step else if (options.shared_libs) b.addSharedLibrary(.{
         .name = "tint",
-        .target = step.target,
+        .target = step.root_module.resolved_target.?,
         .optimize = if (options.debug) .Debug else .ReleaseFast,
     }) else b.addStaticLibrary(.{
         .name = "tint",
-        .target = step.target,
+        .target = step.root_module.resolved_target.?,
         .optimize = if (options.debug) .Debug else .ReleaseFast,
     });
     if (options.install_libs) b.installArtifact(lib);
@@ -1147,10 +1151,9 @@ fn buildLibTint(b: *Build, step: *std.build.CompileStep, options: Options) !*std
 
     var cpp_sources = std.ArrayList([]const u8).init(b.allocator);
 
-    const tag = step.target_info.target.os.tag;
-    if (tag == .windows) {
+    if (target.os.tag == .windows) {
         try cpp_sources.append(sdkPath("/libs/dawn/src/tint/utils/diagnostic/printer_windows.cc"));
-    } else if (tag.isDarwin() or isLinuxDesktopLike(tag)) {
+    } else if (target.os.tag.isDarwin() or isLinuxDesktopLike(target.os.tag)) {
         try cpp_sources.append(sdkPath("/libs/dawn/src/tint/utils/diagnostic/printer_posix.cc"));
     } else {
         try cpp_sources.append(sdkPath("/libs/dawn/src/tint/utils/diagnostic/printer_other.cc"));
@@ -1245,21 +1248,21 @@ fn buildLibTint(b: *Build, step: *std.build.CompileStep, options: Options) !*std
     return lib;
 }
 
-fn linkLibSPIRVToolsDependencies(b: *Build, step: *std.build.CompileStep, options: Options) void {
+fn linkLibSPIRVToolsDependencies(b: *std.Build, step: *std.Build.Step.Compile, options: Options) void {
     _ = b;
     _ = options;
     step.linkLibCpp();
 }
 
 // Builds third_party/vulkan-deps/spirv-tools sources; derived from third_party/vulkan-deps/spirv-tools/src/BUILD.gn
-fn buildLibSPIRVTools(b: *Build, step: *std.build.CompileStep, options: Options) !*std.build.CompileStep {
+fn buildLibSPIRVTools(b: *std.Build, step: *std.Build.Step.Compile, options: Options) !*std.Build.Step.Compile {
     const lib = if (!options.separate_libs) step else if (options.shared_libs) b.addSharedLibrary(.{
         .name = "spirv-tools",
-        .target = step.target,
+        .target = step.root_module.resolved_target.?,
         .optimize = if (options.debug) .Debug else .ReleaseFast,
     }) else b.addStaticLibrary(.{
         .name = "spirv-tools",
-        .target = step.target,
+        .target = step.root_module.resolved_target.?,
         .optimize = if (options.debug) .Debug else .ReleaseFast,
     });
     if (options.install_libs) b.installArtifact(lib);
@@ -1315,17 +1318,17 @@ fn buildLibSPIRVTools(b: *Build, step: *std.build.CompileStep, options: Options)
     return lib;
 }
 
-fn linkLibAbseilCppDependencies(b: *Build, step: *std.build.CompileStep, options: Options) void {
+fn linkLibAbseilCppDependencies(b: *std.Build, step: *std.Build.Step.Compile, options: Options) void {
     _ = b;
     _ = options;
     step.linkLibCpp();
-    const target = step.target_info.target;
+    const target = step.rootModuleTarget();
     if (target.os.tag == .macos) {
         @import("xcode_frameworks").addPaths(step);
-        step.linkSystemLibraryName("objc");
+        step.linkSystemLibrary("objc");
         step.linkFramework("CoreFoundation");
     }
-    if (target.os.tag == .windows) step.linkSystemLibraryName("bcrypt");
+    if (target.os.tag == .windows) step.linkSystemLibrary("bcrypt");
 }
 
 // Builds third_party/abseil sources; derived from:
@@ -1334,20 +1337,19 @@ fn linkLibAbseilCppDependencies(b: *Build, step: *std.build.CompileStep, options
 // $ find third_party/abseil-cpp/absl | grep '\.cc' | grep -v 'test' | grep -v 'benchmark' | grep -v gaussian_distribution_gentables | grep -v print_hash_of | grep -v chi_square
 // ```
 //
-fn buildLibAbseilCpp(b: *Build, step: *std.build.CompileStep, options: Options) !*std.build.CompileStep {
+fn buildLibAbseilCpp(b: *std.Build, step: *std.Build.Step.Compile, options: Options) !*std.Build.Step.Compile {
+    const target = step.rootModuleTarget();
     const lib = if (!options.separate_libs) step else if (options.shared_libs) b.addSharedLibrary(.{
         .name = "abseil",
-        .target = step.target,
+        .target = step.root_module.resolved_target.?,
         .optimize = if (options.debug) .Debug else .ReleaseFast,
     }) else b.addStaticLibrary(.{
         .name = "abseil",
-        .target = step.target,
+        .target = step.root_module.resolved_target.?,
         .optimize = if (options.debug) .Debug else .ReleaseFast,
     });
     if (options.install_libs) b.installArtifact(lib);
     linkLibAbseilCppDependencies(b, lib, options);
-
-    const target = step.target_info.target;
 
     // musl needs this defined in order for off64_t to be a type, which abseil-cpp uses
     lib.defineCMacro("_FILE_OFFSET_BITS", "64");
@@ -1358,6 +1360,7 @@ fn buildLibAbseilCpp(b: *Build, step: *std.build.CompileStep, options: Options) 
         include("libs/dawn"),
         include("libs/dawn/third_party/abseil-cpp"),
         "-Wno-deprecated-declarations",
+        "-Wno-deprecated-builtins",
     });
     if (target.os.tag == .windows) {
         lib.defineCMacro("ABSL_FORCE_THREAD_IDENTITY_MODE", "2");
@@ -1398,21 +1401,21 @@ fn buildLibAbseilCpp(b: *Build, step: *std.build.CompileStep, options: Options) 
     return lib;
 }
 
-fn linkLibDawnWireDependencies(b: *Build, step: *std.build.CompileStep, options: Options) void {
+fn linkLibDawnWireDependencies(b: *std.Build, step: *std.Build.Step.Compile, options: Options) void {
     _ = b;
     _ = options;
     step.linkLibCpp();
 }
 
 // Buids dawn wire sources; derived from src/dawn/wire/BUILD.gn
-fn buildLibDawnWire(b: *Build, step: *std.build.CompileStep, options: Options) !*std.build.CompileStep {
+fn buildLibDawnWire(b: *std.Build, step: *std.Build.Step.Compile, options: Options) !*std.Build.Step.Compile {
     const lib = if (!options.separate_libs) step else if (options.shared_libs) b.addSharedLibrary(.{
         .name = "dawn-wire",
-        .target = step.target,
+        .target = step.root_module.resolved_target.?,
         .optimize = if (options.debug) .Debug else .ReleaseFast,
     }) else b.addStaticLibrary(.{
         .name = "dawn-wire",
-        .target = step.target,
+        .target = step.root_module.resolved_target.?,
         .optimize = if (options.debug) .Debug else .ReleaseFast,
     });
     if (options.install_libs) b.installArtifact(lib);
@@ -1442,30 +1445,29 @@ fn buildLibDawnWire(b: *Build, step: *std.build.CompileStep, options: Options) !
     return lib;
 }
 
-fn linkLibDxcompilerDependencies(b: *Build, step: *std.build.CompileStep, options: Options) void {
+fn linkLibDxcompilerDependencies(b: *std.Build, step: *std.Build.Step.Compile, options: Options) void {
     if (options.d3d12.?) {
         step.linkLibCpp();
         step.linkLibrary(b.dependency("direct3d_headers", .{
-            .target = step.target,
-            .optimize = step.optimize,
+            .target = step.root_module.resolved_target.?,
+            .optimize = step.root_module.optimize.?,
         }).artifact("direct3d-headers"));
         @import("direct3d_headers").addLibraryPath(step);
-
-        step.linkSystemLibraryName("oleaut32");
-        step.linkSystemLibraryName("ole32");
-        step.linkSystemLibraryName("dbghelp");
+        step.linkSystemLibrary("oleaut32");
+        step.linkSystemLibrary("ole32");
+        step.linkSystemLibrary("dbghelp");
     }
 }
 
 // Buids dxcompiler sources; derived from libs/DirectXShaderCompiler/CMakeLists.txt
-fn buildLibDxcompiler(b: *Build, step: *std.build.CompileStep, options: Options) !*std.build.CompileStep {
+fn buildLibDxcompiler(b: *std.Build, step: *std.Build.Step.Compile, options: Options) !*std.Build.Step.Compile {
     const lib = if (!options.separate_libs) step else if (options.shared_libs) b.addSharedLibrary(.{
         .name = "dxcompiler",
-        .target = step.target,
+        .target = step.root_module.resolved_target.?,
         .optimize = if (options.debug) .Debug else .ReleaseFast,
     }) else b.addStaticLibrary(.{
         .name = "dxcompiler",
-        .target = step.target,
+        .target = step.root_module.resolved_target.?,
         .optimize = if (options.debug) .Debug else .ReleaseFast,
     });
     if (options.install_libs) b.installArtifact(lib);
@@ -1554,8 +1556,8 @@ fn buildLibDxcompiler(b: *Build, step: *std.build.CompileStep, options: Options)
 }
 
 fn appendLangScannedSources(
-    b: *Build,
-    step: *std.build.CompileStep,
+    b: *std.Build,
+    step: *std.Build.Step.Compile,
     args: struct {
         debug_symbols: bool = false,
         flags: []const []const u8,
@@ -1590,7 +1592,7 @@ fn appendLangScannedSources(
     });
 }
 
-fn appendScannedSources(b: *Build, step: *std.build.CompileStep, args: struct {
+fn appendScannedSources(b: *std.Build, step: *std.Build.Step.Compile, args: struct {
     flags: []const []const u8,
     rel_dirs: []const []const u8 = &.{},
     extensions: []const []const u8,
@@ -1608,7 +1610,7 @@ fn appendScannedSources(b: *Build, step: *std.build.CompileStep, args: struct {
 /// listed in the excluded list.
 /// Results are appended to the dst ArrayList.
 fn scanSources(
-    b: *Build,
+    b: *std.Build,
     dst: *std.ArrayList([]const u8),
     rel_dir: []const u8,
     extensions: []const []const u8,
