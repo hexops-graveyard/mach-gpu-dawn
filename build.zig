@@ -1618,7 +1618,7 @@ fn scanSources(
     excluding_contains: []const []const u8,
 ) !void {
     const abs_dir = try std.fs.path.join(b.allocator, &.{ sdkPath("/"), rel_dir });
-    var dir = std.fs.openDirAbsolute(abs_dir, .{}) catch |err| {
+    var dir = std.fs.openDirAbsolute(abs_dir, .{ .iterate = true }) catch |err| {
         std.log.err("mach: error: failed to open: {s}", .{abs_dir});
         return err;
     };
