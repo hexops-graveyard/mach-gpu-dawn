@@ -88,7 +88,7 @@ pub const Options = struct {
     install_libs: bool = false,
 
     /// The binary release version to use from https://github.com/hexops/mach-gpu-dawn/releases
-            binary_version: []const u8 = "release-f331c1c",
+    binary_version: []const u8 = "release-f331c1c",
 
     /// Detects the default options to use for the given target.
     pub fn detectDefaults(self: Options, target: std.Target) Options {
@@ -134,7 +134,7 @@ pub fn link(b: *std.Build, step: *std.Build.Step.Compile, options: Options) void
 fn linkFromSource(b: *std.Build, step: *std.Build.Step.Compile, options: Options) !void {
     // Source scanning requires that these files actually exist on disk, so we must download them
     // here right now if we are building from source.
-    try ensureGitRepoCloned(b.allocator, "https://github.com/hexops/dawn", "generated-2023-08-10.1691685418", sdkPath("/libs/dawn"));
+    try ensureDawnCloned(b.allocator);
 
     // branch: mach
     try ensureGitRepoCloned(b.allocator, "https://github.com/hexops/DirectXShaderCompiler", "bb5211aa247978e2ab75bea9f5c985ba3fabd269", sdkPath("/libs/DirectXShaderCompiler"));
@@ -188,6 +188,10 @@ fn linkFromSource(b: *std.Build, step: *std.Build.Step.Compile, options: Options
     if (options.d3d12.?) _ = try buildLibDxcompiler(b, lib_dawn, options);
 }
 
+pub fn ensureDawnCloned(allocator: std.mem.Allocator) !void {
+    try ensureGitRepoCloned(allocator, "https://github.com/hexops/dawn", "generated-2023-08-10.1691685418", sdkPath("/libs/dawn"));
+}
+
 fn ensureGitRepoCloned(allocator: std.mem.Allocator, clone_url: []const u8, revision: []const u8, dir: []const u8) !void {
     if (isEnvVarTruthy(allocator, "NO_ENSURE_SUBMODULES") or isEnvVarTruthy(allocator, "NO_ENSURE_GIT")) {
         return;
@@ -208,7 +212,7 @@ fn ensureGitRepoCloned(allocator: std.mem.Allocator, clone_url: []const u8, revi
         error.FileNotFound => {
             std.log.info("cloning required dependency..\ngit clone {s} {s}..\n", .{ clone_url, dir });
 
-            try exec(allocator, &[_][]const u8{ "git", "clone", "-c", "core.longpaths=true", clone_url, dir }, sdkPath("/"));
+            try exec(allocator, &[_][]const u8{ "git", "clone", "--depth", "1", "-c", "core.longpaths=true", clone_url, dir }, sdkPath("/"));
             try exec(allocator, &[_][]const u8{ "git", "checkout", "--quiet", "--force", revision }, dir);
             try exec(allocator, &[_][]const u8{ "git", "submodule", "update", "--init", "--recursive" }, dir);
             return;
@@ -676,7 +680,7 @@ fn linkLibDawnCommonDependencies(b: *std.Build, step: *std.Build.Step.Compile, o
 }
 
 // Builds common sources; derived from src/common/BUILD.gn
-fn buildLibDawnCommon(b: *std.Build, step: *std.Build.Step.Compile, options: Options) !*std.Build.Step.Compile {
+pub fn buildLibDawnCommon(b: *std.Build, step: *std.Build.Step.Compile, options: Options) !*std.Build.Step.Compile {
     const target = step.rootModuleTarget();
     const lib = if (!options.separate_libs) step else if (options.shared_libs) b.addSharedLibrary(.{
         .name = "dawn-common",
@@ -742,7 +746,7 @@ fn linkLibDawnPlatformDependencies(b: *std.Build, step: *std.Build.Step.Compile,
 }
 
 // Build dawn platform sources; derived from src/dawn/platform/BUILD.gn
-fn buildLibDawnPlatform(b: *std.Build, step: *std.Build.Step.Compile, options: Options) !*std.Build.Step.Compile {
+pub fn buildLibDawnPlatform(b: *std.Build, step: *std.Build.Step.Compile, options: Options) !*std.Build.Step.Compile {
     const lib = if (!options.separate_libs) step else if (options.shared_libs) b.addSharedLibrary(.{
         .name = "dawn-platform",
         .target = step.root_module.resolved_target.?,
@@ -818,7 +822,7 @@ fn linkLibDawnNativeDependencies(b: *std.Build, step: *std.Build.Step.Compile, o
 }
 
 // Builds dawn native sources; derived from src/dawn/native/BUILD.gn
-fn buildLibDawnNative(b: *std.Build, step: *std.Build.Step.Compile, options: Options) !*std.Build.Step.Compile {
+pub fn buildLibDawnNative(b: *std.Build, step: *std.Build.Step.Compile, options: Options) !*std.Build.Step.Compile {
     const target = step.rootModuleTarget();
     const lib = if (!options.separate_libs) step else if (options.shared_libs) b.addSharedLibrary(.{
         .name = "dawn-native",
@@ -1115,7 +1119,7 @@ fn linkLibTintDependencies(b: *std.Build, step: *std.Build.Step.Compile, options
 }
 
 // Builds tint sources; derived from src/tint/BUILD.gn
-fn buildLibTint(b: *std.Build, step: *std.Build.Step.Compile, options: Options) !*std.Build.Step.Compile {
+pub fn buildLibTint(b: *std.Build, step: *std.Build.Step.Compile, options: Options) !*std.Build.Step.Compile {
     const target = step.rootModuleTarget();
     const lib = if (!options.separate_libs) step else if (options.shared_libs) b.addSharedLibrary(.{
         .name = "tint",
@@ -1303,7 +1307,7 @@ fn linkLibSPIRVToolsDependencies(b: *std.Build, step: *std.Build.Step.Compile, o
 }
 
 // Builds third_party/vulkan-deps/spirv-tools sources; derived from third_party/vulkan-deps/spirv-tools/src/BUILD.gn
-fn buildLibSPIRVTools(b: *std.Build, step: *std.Build.Step.Compile, options: Options) !*std.Build.Step.Compile {
+pub fn buildLibSPIRVTools(b: *std.Build, step: *std.Build.Step.Compile, options: Options) !*std.Build.Step.Compile {
     const lib = if (!options.separate_libs) step else if (options.shared_libs) b.addSharedLibrary(.{
         .name = "spirv-tools",
         .target = step.root_module.resolved_target.?,
@@ -1385,7 +1389,7 @@ fn linkLibAbseilCppDependencies(b: *std.Build, step: *std.Build.Step.Compile, op
 // $ find third_party/abseil-cpp/absl | grep '\.cc' | grep -v 'test' | grep -v 'benchmark' | grep -v gaussian_distribution_gentables | grep -v print_hash_of | grep -v chi_square
 // ```
 //
-fn buildLibAbseilCpp(b: *std.Build, step: *std.Build.Step.Compile, options: Options) !*std.Build.Step.Compile {
+pub fn buildLibAbseilCpp(b: *std.Build, step: *std.Build.Step.Compile, options: Options) !*std.Build.Step.Compile {
     const target = step.rootModuleTarget();
     const lib = if (!options.separate_libs) step else if (options.shared_libs) b.addSharedLibrary(.{
         .name = "abseil",
@@ -1456,7 +1460,7 @@ fn linkLibDawnWireDependencies(b: *std.Build, step: *std.Build.Step.Compile, opt
 }
 
 // Buids dawn wire sources; derived from src/dawn/wire/BUILD.gn
-fn buildLibDawnWire(b: *std.Build, step: *std.Build.Step.Compile, options: Options) !*std.Build.Step.Compile {
+pub fn buildLibDawnWire(b: *std.Build, step: *std.Build.Step.Compile, options: Options) !*std.Build.Step.Compile {
     const lib = if (!options.separate_libs) step else if (options.shared_libs) b.addSharedLibrary(.{
         .name = "dawn-wire",
         .target = step.root_module.resolved_target.?,
@@ -1508,7 +1512,7 @@ fn linkLibDxcompilerDependencies(b: *std.Build, step: *std.Build.Step.Compile, o
 }
 
 // Buids dxcompiler sources; derived from libs/DirectXShaderCompiler/CMakeLists.txt
-fn buildLibDxcompiler(b: *std.Build, step: *std.Build.Step.Compile, options: Options) !*std.Build.Step.Compile {
+pub fn buildLibDxcompiler(b: *std.Build, step: *std.Build.Step.Compile, options: Options) !*std.Build.Step.Compile {
     const lib = if (!options.separate_libs) step else if (options.shared_libs) b.addSharedLibrary(.{
         .name = "dxcompiler",
         .target = step.root_module.resolved_target.?,
