@@ -16,7 +16,7 @@ pub fn build(b: *std.Build) !void {
         .target = target,
         .optimize = optimize,
     });
-    link(b, example, options);
+    link(b, example, &example.root_module, options);
 
     const example_step = b.step("dawn", "Build dawn from source");
     example_step.dependOn(&b.addRunArtifact(example).step);
@@ -88,7 +88,7 @@ pub const Options = struct {
     install_libs: bool = false,
 
     /// The binary release version to use from https://github.com/hexops/mach-gpu-dawn/releases
-            binary_version: []const u8 = "release-f331c1c",
+    binary_version: []const u8 = "release-f331c1c",
 
     /// Detects the default options to use for the given target.
     pub fn detectDefaults(self: Options, target: std.Target) Options {
@@ -110,15 +110,15 @@ pub const Options = struct {
     }
 };
 
-pub fn link(b: *std.Build, step: *std.Build.Step.Compile, options: Options) void {
+pub fn link(b: *std.Build, step: *std.Build.Step.Compile, mod: *std.Build.Module, options: Options) void {
     const target = step.rootModuleTarget();
     const opt = options.detectDefaults(target);
 
     if (target.os.tag == .windows) @import("direct3d_headers").addLibraryPath(step);
-    if (target.os.tag == .macos) @import("xcode_frameworks").addPaths(step);
+    if (target.os.tag == .macos) @import("xcode_frameworks").addPaths(mod);
 
     if (options.from_source or isEnvVarTruthy(b.allocator, "DAWN_FROM_SOURCE")) {
-        linkFromSource(b, step, opt) catch unreachable;
+        linkFromSource(b, step, mod, opt) catch unreachable;
     } else {
         // Add a build step to download Dawn binaries. This ensures it only downloads if needed,
         // and that e.g. if you are running a different `zig build <step>` it doesn't always just
@@ -127,11 +127,12 @@ pub fn link(b: *std.Build, step: *std.Build.Step.Compile, options: Options) void
         step.step.dependOn(&download_step.step);
 
         // Declare how to link against the binaries.
-        linkFromBinary(b, step, opt) catch unreachable;
+        linkFromBinary(b, step, mod, opt) catch unreachable;
     }
 }
 
-fn linkFromSource(b: *std.Build, step: *std.Build.Step.Compile, options: Options) !void {
+fn linkFromSource(b: *std.Build, step: *std.Build.Step.Compile, mod: *std.Build.Module, options: Options) !void {
+    _ = mod;
     // Source scanning requires that these files actually exist on disk, so we must download them
     // here right now if we are building from source.
     try ensureGitRepoCloned(b.allocator, "https://github.com/hexops/dawn", "generated-2023-08-10.1691685418", sdkPath("/libs/dawn"));
@@ -325,7 +326,7 @@ pub fn downloadFromBinary(b: *std.Build, step: *std.Build.Step.Compile, options:
     );
 }
 
-pub fn linkFromBinary(b: *std.Build, step: *std.Build.Step.Compile, options: Options) !void {
+pub fn linkFromBinary(b: *std.Build, step: *std.Build.Step.Compile, mod: *std.Build.Module, options: Options) !void {
     const target = step.rootModuleTarget();
 
     // Remove OS version range / glibc version from triple (we do not include that in our download
@@ -355,14 +356,14 @@ pub fn linkFromBinary(b: *std.Build, step: *std.Build.Step.Compile, options: Opt
     step.addIncludePath(.{ .path = include_dir });
     step.addIncludePath(.{ .path = sdkPath("/src/dawn") });
 
-    linkLibDawnCommonDependencies(b, step, options);
-    linkLibDawnPlatformDependencies(b, step, options);
-    linkLibDawnNativeDependencies(b, step, options);
-    linkLibTintDependencies(b, step, options);
-    linkLibSPIRVToolsDependencies(b, step, options);
-    linkLibAbseilCppDependencies(b, step, options);
-    linkLibDawnWireDependencies(b, step, options);
-    linkLibDxcompilerDependencies(b, step, options);
+    linkLibDawnCommonDependencies(b, step, mod, options);
+    linkLibDawnPlatformDependencies(b, step, mod, options);
+    linkLibDawnNativeDependencies(b, step, mod, options);
+    linkLibTintDependencies(b, step, mod, options);
+    linkLibSPIRVToolsDependencies(b, step, mod, options);
+    linkLibAbseilCppDependencies(b, step, mod, options);
+    linkLibDawnWireDependencies(b, step, mod, options);
+    linkLibDxcompilerDependencies(b, step, mod, options);
 
     // Transitive dependencies, explicit linkage of these works around
     // ziglang/zig#17130
@@ -664,12 +665,12 @@ pub fn appendFlags(step: *std.Build.Step.Compile, flags: *std.ArrayList([]const 
     }
 }
 
-fn linkLibDawnCommonDependencies(b: *std.Build, step: *std.Build.Step.Compile, options: Options) void {
+fn linkLibDawnCommonDependencies(b: *std.Build, step: *std.Build.Step.Compile, mod: *std.Build.Module, options: Options) void {
     _ = b;
     _ = options;
     step.linkLibCpp();
     if (step.rootModuleTarget().os.tag == .macos) {
-        @import("xcode_frameworks").addPaths(step);
+        @import("xcode_frameworks").addPaths(mod);
         step.linkSystemLibrary("objc");
         step.linkFramework("Foundation");
     }
@@ -688,7 +689,7 @@ fn buildLibDawnCommon(b: *std.Build, step: *std.Build.Step.Compile, options: Opt
         .optimize = if (options.debug) .Debug else .ReleaseFast,
     });
     if (options.install_libs) b.installArtifact(lib);
-    linkLibDawnCommonDependencies(b, lib, options);
+    linkLibDawnCommonDependencies(b, lib, &lib.root_module, options);
 
     if (target.os.tag == .linux) lib.linkLibrary(b.dependency("x11_headers", .{
         .target = step.root_module.resolved_target.?,
@@ -735,7 +736,8 @@ fn buildLibDawnCommon(b: *std.Build, step: *std.Build.Step.Compile, options: Opt
     return lib;
 }
 
-fn linkLibDawnPlatformDependencies(b: *std.Build, step: *std.Build.Step.Compile, options: Options) void {
+fn linkLibDawnPlatformDependencies(b: *std.Build, step: *std.Build.Step.Compile, mod: *std.Build.Module, options: Options) void {
+    _ = mod;
     _ = b;
     _ = options;
     step.linkLibCpp();
@@ -753,7 +755,7 @@ fn buildLibDawnPlatform(b: *std.Build, step: *std.Build.Step.Compile, options: O
         .optimize = if (options.debug) .Debug else .ReleaseFast,
     });
     if (options.install_libs) b.installArtifact(lib);
-    linkLibDawnPlatformDependencies(b, lib, options);
+    linkLibDawnPlatformDependencies(b, lib, &lib.root_module, options);
 
     var cpp_flags = std.ArrayList([]const u8).init(b.allocator);
     try appendFlags(lib, &cpp_flags, options.debug, true);
@@ -796,7 +798,7 @@ fn defineDawnEnableBackend(step: *std.Build.Step.Compile, options: Options) void
     }
 }
 
-fn linkLibDawnNativeDependencies(b: *std.Build, step: *std.Build.Step.Compile, options: Options) void {
+fn linkLibDawnNativeDependencies(b: *std.Build, step: *std.Build.Step.Compile, mod: *std.Build.Module, options: Options) void {
     step.linkLibCpp();
     if (options.d3d12.?) {
         step.linkLibrary(b.dependency("direct3d_headers", .{
@@ -806,7 +808,7 @@ fn linkLibDawnNativeDependencies(b: *std.Build, step: *std.Build.Step.Compile, o
         @import("direct3d_headers").addLibraryPath(step);
     }
     if (options.metal.?) {
-        @import("xcode_frameworks").addPaths(step);
+        @import("xcode_frameworks").addPaths(mod);
         step.linkSystemLibrary("objc");
         step.linkFramework("Metal");
         step.linkFramework("CoreGraphics");
@@ -830,7 +832,7 @@ fn buildLibDawnNative(b: *std.Build, step: *std.Build.Step.Compile, options: Opt
         .optimize = if (options.debug) .Debug else .ReleaseFast,
     });
     if (options.install_libs) b.installArtifact(lib);
-    linkLibDawnNativeDependencies(b, lib, options);
+    linkLibDawnNativeDependencies(b, lib, &lib.root_module, options);
 
     if (options.vulkan.?) lib.linkLibrary(b.dependency("vulkan_headers", .{
         .target = step.root_module.resolved_target.?,
@@ -1108,7 +1110,8 @@ fn buildLibDawnNative(b: *std.Build, step: *std.Build.Step.Compile, options: Opt
     return lib;
 }
 
-fn linkLibTintDependencies(b: *std.Build, step: *std.Build.Step.Compile, options: Options) void {
+fn linkLibTintDependencies(b: *std.Build, step: *std.Build.Step.Compile, mod: *std.Build.Module, options: Options) void {
+    _ = mod;
     _ = b;
     _ = options;
     step.linkLibCpp();
@@ -1127,7 +1130,7 @@ fn buildLibTint(b: *std.Build, step: *std.Build.Step.Compile, options: Options) 
         .optimize = if (options.debug) .Debug else .ReleaseFast,
     });
     if (options.install_libs) b.installArtifact(lib);
-    linkLibTintDependencies(b, lib, options);
+    linkLibTintDependencies(b, lib, &lib.root_module, options);
 
     lib.defineCMacro("_HRESULT_DEFINED", "");
     lib.defineCMacro("HRESULT", "long");
@@ -1296,7 +1299,8 @@ fn buildLibTint(b: *std.Build, step: *std.Build.Step.Compile, options: Options) 
     return lib;
 }
 
-fn linkLibSPIRVToolsDependencies(b: *std.Build, step: *std.Build.Step.Compile, options: Options) void {
+fn linkLibSPIRVToolsDependencies(b: *std.Build, step: *std.Build.Step.Compile, mod: *std.Build.Module, options: Options) void {
+    _ = mod;
     _ = b;
     _ = options;
     step.linkLibCpp();
@@ -1314,7 +1318,7 @@ fn buildLibSPIRVTools(b: *std.Build, step: *std.Build.Step.Compile, options: Opt
         .optimize = if (options.debug) .Debug else .ReleaseFast,
     });
     if (options.install_libs) b.installArtifact(lib);
-    linkLibSPIRVToolsDependencies(b, lib, options);
+    linkLibSPIRVToolsDependencies(b, lib, &lib.root_module, options);
 
     var flags = std.ArrayList([]const u8).init(b.allocator);
     try flags.appendSlice(&.{
@@ -1366,13 +1370,13 @@ fn buildLibSPIRVTools(b: *std.Build, step: *std.Build.Step.Compile, options: Opt
     return lib;
 }
 
-fn linkLibAbseilCppDependencies(b: *std.Build, step: *std.Build.Step.Compile, options: Options) void {
+fn linkLibAbseilCppDependencies(b: *std.Build, step: *std.Build.Step.Compile, mod: *std.Build.Module, options: Options) void {
     _ = b;
     _ = options;
     step.linkLibCpp();
     const target = step.rootModuleTarget();
     if (target.os.tag == .macos) {
-        @import("xcode_frameworks").addPaths(step);
+        @import("xcode_frameworks").addPaths(mod);
         step.linkSystemLibrary("objc");
         step.linkFramework("CoreFoundation");
     }
@@ -1397,7 +1401,7 @@ fn buildLibAbseilCpp(b: *std.Build, step: *std.Build.Step.Compile, options: Opti
         .optimize = if (options.debug) .Debug else .ReleaseFast,
     });
     if (options.install_libs) b.installArtifact(lib);
-    linkLibAbseilCppDependencies(b, lib, options);
+    linkLibAbseilCppDependencies(b, lib, &lib.root_module, options);
 
     // musl needs this defined in order for off64_t to be a type, which abseil-cpp uses
     lib.defineCMacro("_FILE_OFFSET_BITS", "64");
@@ -1449,7 +1453,8 @@ fn buildLibAbseilCpp(b: *std.Build, step: *std.Build.Step.Compile, options: Opti
     return lib;
 }
 
-fn linkLibDawnWireDependencies(b: *std.Build, step: *std.Build.Step.Compile, options: Options) void {
+fn linkLibDawnWireDependencies(b: *std.Build, step: *std.Build.Step.Compile, mod: *std.Build.Module, options: Options) void {
+    _ = mod;
     _ = b;
     _ = options;
     step.linkLibCpp();
@@ -1467,7 +1472,7 @@ fn buildLibDawnWire(b: *std.Build, step: *std.Build.Step.Compile, options: Optio
         .optimize = if (options.debug) .Debug else .ReleaseFast,
     });
     if (options.install_libs) b.installArtifact(lib);
-    linkLibDawnWireDependencies(b, lib, options);
+    linkLibDawnWireDependencies(b, lib, &lib.root_module, options);
 
     var flags = std.ArrayList([]const u8).init(b.allocator);
     try flags.appendSlice(&.{
@@ -1493,7 +1498,8 @@ fn buildLibDawnWire(b: *std.Build, step: *std.Build.Step.Compile, options: Optio
     return lib;
 }
 
-fn linkLibDxcompilerDependencies(b: *std.Build, step: *std.Build.Step.Compile, options: Options) void {
+fn linkLibDxcompilerDependencies(b: *std.Build, step: *std.Build.Step.Compile, mod: *std.Build.Module, options: Options) void {
+    _ = mod;
     if (options.d3d12.?) {
         step.linkLibCpp();
         step.linkLibrary(b.dependency("direct3d_headers", .{
@@ -1519,7 +1525,7 @@ fn buildLibDxcompiler(b: *std.Build, step: *std.Build.Step.Compile, options: Opt
         .optimize = if (options.debug) .Debug else .ReleaseFast,
     });
     if (options.install_libs) b.installArtifact(lib);
-    linkLibDxcompilerDependencies(b, lib, options);
+    linkLibDxcompilerDependencies(b, lib, &lib.root_module, options);
 
     lib.defineCMacro("UNREFERENCED_PARAMETER(x)", "");
     lib.defineCMacro("MSFT_SUPPORTS_CHILD_PROCESSES", "1");
