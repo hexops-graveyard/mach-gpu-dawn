@@ -732,11 +732,11 @@ fn buildLibDawnCommon(b: *std.Build, step: *std.Build.Step.Compile, options: Opt
     var cpp_sources = std.ArrayList([]const u8).init(b.allocator);
     if (target.os.tag == .macos) {
         // TODO(build-system): pass system SDK options through
-        const abs_path = sdkPath("/libs/dawn/src/dawn/common/SystemUtils_mac.mm");
+        const abs_path = "libs/dawn/src/dawn/common/SystemUtils_mac.mm";
         try cpp_sources.append(abs_path);
     }
     if (target.os.tag == .windows) {
-        const abs_path = sdkPath("/libs/dawn/src/dawn/common/WindowsUtils.cpp");
+        const abs_path = "libs/dawn/src/dawn/common/WindowsUtils.cpp";
         try cpp_sources.append(abs_path);
     }
 
@@ -784,7 +784,7 @@ fn buildLibDawnPlatform(b: *std.Build, step: *std.Build.Step.Compile, options: O
         "src/dawn/platform/WorkerThread.cpp",
         "src/dawn/platform/DawnPlatform.cpp",
     }) |path| {
-        const abs_path = sdkPath("/libs/dawn/" ++ path);
+        const abs_path = "libs/dawn/" ++ path;
         try cpp_sources.append(abs_path);
     }
 
@@ -956,8 +956,7 @@ fn buildLibDawnNative(b: *std.Build, step: *std.Build.Step.Compile, options: Opt
         inline for ([_][]const u8{
             "src/dawn/mingw_helpers.cpp",
         }) |path| {
-            const abs_path = sdkPath("/" ++ path);
-            try cpp_sources.append(abs_path);
+            try cpp_sources.append(path);
         }
 
         try appendLangScannedSources(b, lib, .{
@@ -985,7 +984,7 @@ fn buildLibDawnNative(b: *std.Build, step: *std.Build.Step.Compile, options: Opt
         inline for ([_][]const u8{
             "src/dawn/native/X11Functions.cpp",
         }) |path| {
-            const abs_path = sdkPath("/libs/dawn/" ++ path);
+            const abs_path = "libs/dawn/" ++ path;
             try cpp_sources.append(abs_path);
         }
     }
@@ -993,7 +992,7 @@ fn buildLibDawnNative(b: *std.Build, step: *std.Build.Step.Compile, options: Opt
     inline for ([_][]const u8{
         "src/dawn/native/null/DeviceNull.cpp",
     }) |path| {
-        const abs_path = sdkPath("/libs/dawn/" ++ path);
+        const abs_path = "libs/dawn/" ++ path;
         try cpp_sources.append(abs_path);
     }
 
@@ -1001,7 +1000,7 @@ fn buildLibDawnNative(b: *std.Build, step: *std.Build.Step.Compile, options: Opt
         inline for ([_][]const u8{
             "src/dawn/native/SpirvValidation.cpp",
         }) |path| {
-            const abs_path = sdkPath("/libs/dawn/" ++ path);
+            const abs_path = "libs/dawn/" ++ path;
             try cpp_sources.append(abs_path);
         }
     }
@@ -1025,18 +1024,18 @@ fn buildLibDawnNative(b: *std.Build, step: *std.Build.Step.Compile, options: Opt
             .flags = flags.items,
             .excluding_contains = &.{ "test", "benchmark", "mock" },
         });
-        try cpp_sources.append(sdkPath("/libs/dawn/" ++ "src/dawn/native/vulkan/external_memory/MemoryService.cpp"));
-        try cpp_sources.append(sdkPath("/libs/dawn/" ++ "src/dawn/native/vulkan/external_memory/MemoryServiceImplementation.cpp"));
-        try cpp_sources.append(sdkPath("/libs/dawn/" ++ "src/dawn/native/vulkan/external_memory/MemoryServiceImplementationDmaBuf.cpp"));
-        try cpp_sources.append(sdkPath("/libs/dawn/" ++ "src/dawn/native/vulkan/external_semaphore/SemaphoreService.cpp"));
-        try cpp_sources.append(sdkPath("/libs/dawn/" ++ "src/dawn/native/vulkan/external_semaphore/SemaphoreServiceImplementation.cpp"));
+        try cpp_sources.append("libs/dawn/" ++ "src/dawn/native/vulkan/external_memory/MemoryService.cpp");
+        try cpp_sources.append("libs/dawn/" ++ "src/dawn/native/vulkan/external_memory/MemoryServiceImplementation.cpp");
+        try cpp_sources.append("libs/dawn/" ++ "src/dawn/native/vulkan/external_memory/MemoryServiceImplementationDmaBuf.cpp");
+        try cpp_sources.append("libs/dawn/" ++ "src/dawn/native/vulkan/external_semaphore/SemaphoreService.cpp");
+        try cpp_sources.append("libs/dawn/" ++ "src/dawn/native/vulkan/external_semaphore/SemaphoreServiceImplementation.cpp");
 
         if (isLinuxDesktopLike(target.os.tag)) {
             inline for ([_][]const u8{
                 "src/dawn/native/vulkan/external_memory/MemoryServiceImplementationOpaqueFD.cpp",
                 "src/dawn/native/vulkan/external_semaphore/SemaphoreServiceImplementationFD.cpp",
             }) |path| {
-                const abs_path = sdkPath("/libs/dawn/" ++ path);
+                const abs_path = "libs/dawn/" ++ path;
                 try cpp_sources.append(abs_path);
             }
         } else if (target.os.tag == .fuchsia) {
@@ -1044,7 +1043,7 @@ fn buildLibDawnNative(b: *std.Build, step: *std.Build.Step.Compile, options: Opt
                 "src/dawn/native/vulkan/external_memory/MemoryServiceImplementationZirconHandle.cpp",
                 "src/dawn/native/vulkan/external_semaphore/SemaphoreServiceImplementationZirconHandle.cpp",
             }) |path| {
-                const abs_path = sdkPath("/libs/dawn/" ++ path);
+                const abs_path = "libs/dawn/" ++ path;
                 try cpp_sources.append(abs_path);
             }
         } else if (target.isAndroid()) {
@@ -1052,7 +1051,7 @@ fn buildLibDawnNative(b: *std.Build, step: *std.Build.Step.Compile, options: Opt
                 "src/dawn/native/vulkan/external_memory/MemoryServiceImplementationAHardwareBuffer.cpp",
                 "src/dawn/native/vulkan/external_semaphore/SemaphoreServiceImplementationFD.cpp",
             }) |path| {
-                const abs_path = sdkPath("/libs/dawn/" ++ path);
+                const abs_path = "libs/dawn/" ++ path;
                 try cpp_sources.append(abs_path);
             }
             lib.defineCMacro("DAWN_USE_SYNC_FDS", "1");
@@ -1101,7 +1100,7 @@ fn buildLibDawnNative(b: *std.Build, step: *std.Build.Step.Compile, options: Opt
     inline for ([_][]const u8{
         "src/dawn/native/null/NullBackend.cpp",
     }) |path| {
-        const abs_path = sdkPath("/libs/dawn/" ++ path);
+        const abs_path = "libs/dawn/" ++ path;
         try cpp_sources.append(abs_path);
     }
 
@@ -1109,7 +1108,7 @@ fn buildLibDawnNative(b: *std.Build, step: *std.Build.Step.Compile, options: Opt
         inline for ([_][]const u8{
             "src/dawn/native/d3d12/D3D12Backend.cpp",
         }) |path| {
-            const abs_path = sdkPath("/libs/dawn/" ++ path);
+            const abs_path = "libs/dawn/" ++ path;
             try cpp_sources.append(abs_path);
         }
     }
@@ -1214,11 +1213,11 @@ fn buildLibTint(b: *std.Build, step: *std.Build.Step.Compile, options: Options) 
     var cpp_sources = std.ArrayList([]const u8).init(b.allocator);
 
     if (target.os.tag == .windows) {
-        try cpp_sources.append(sdkPath("/libs/dawn/src/tint/utils/diagnostic/printer_windows.cc"));
+        try cpp_sources.append("libs/dawn/src/tint/utils/diagnostic/printer_windows.cc");
     } else if (target.os.tag.isDarwin() or isLinuxDesktopLike(target.os.tag)) {
-        try cpp_sources.append(sdkPath("/libs/dawn/src/tint/utils/diagnostic/printer_posix.cc"));
+        try cpp_sources.append("libs/dawn/src/tint/utils/diagnostic/printer_posix.cc");
     } else {
-        try cpp_sources.append(sdkPath("/libs/dawn/src/tint/utils/diagnostic/printer_other.cc"));
+        try cpp_sources.append("libs/dawn/src/tint/utils/diagnostic/printer_other.cc");
     }
 
     // libtint_sem_src
@@ -1691,8 +1690,7 @@ fn scanSources(
     var dir_it = dir.iterate();
     while (try dir_it.next()) |entry| {
         if (entry.kind != .file) continue;
-        var abs_path = try std.fs.path.join(b.allocator, &.{ abs_dir, entry.name });
-        abs_path = try std.fs.realpathAlloc(b.allocator, abs_path);
+        const rel_path = try std.fs.path.join(b.allocator, &.{ rel_dir, entry.name });
 
         const allowed_extension = blk: {
             const ours = std.fs.path.extension(entry.name);
@@ -1719,7 +1717,7 @@ fn scanSources(
         };
         if (excluded_contains) continue;
 
-        try dst.append(abs_path);
+        try dst.append(rel_path);
     }
 }
 
