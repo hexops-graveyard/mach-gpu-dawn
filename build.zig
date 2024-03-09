@@ -1,5 +1,7 @@
 const std = @import("std");
 
+const log = std.log.scoped(.mach_gpu_dawn);
+
 pub fn build(b: *std.Build) !void {
     const optimize = b.standardOptimizeOption(.{});
     const target = b.standardTargetOptions(.{});
@@ -88,7 +90,7 @@ pub const Options = struct {
     install_libs: bool = false,
 
     /// The binary release version to use from https://github.com/hexops/mach-gpu-dawn/releases
-            binary_version: []const u8 = "release-1cce80c",
+    binary_version: []const u8 = "release-1cce80c",
 
     /// Detects the default options to use for the given target.
     pub fn detectDefaults(self: Options, target: std.Target) Options {
@@ -519,7 +521,9 @@ fn downloadBinary(
     downloadFile(allocator, gz_target_file, download_url) catch @panic(gz_target_file);
     const target_file = try std.fs.path.join(allocator, &.{ target_cache_dir, lib_file_name });
     defer allocator.free(target_file);
+    log.info("extracting {s}\n", .{gz_target_file});
     try gzipDecompress(allocator, gz_target_file, target_file);
+    log.info("finished\n", .{});
 
     // If we don't yet have the headers (these are shared across architectures), download them.
     const include_dir = try std.fs.path.join(allocator, &.{ commit_cache_dir, "include" });
@@ -580,11 +584,10 @@ fn gzipDecompress(allocator: std.mem.Allocator, src_absolute_path: []const u8, d
     defer file.close();
 
     var buf_stream = std.io.bufferedReader(file.reader());
-    var gzip_stream = try std.compress.gzip.decompress(allocator, buf_stream.reader());
-    defer gzip_stream.deinit();
+    var decompressor = std.compress.gzip.decompressor(buf_stream.reader());
 
     // Read and decompress the whole file
-    const buf = try gzip_stream.reader().readAllAlloc(allocator, std.math.maxInt(usize));
+    const buf = try decompressor.reader().readAllAlloc(allocator, std.math.maxInt(usize));
     defer allocator.free(buf);
 
     var new_file = try std.fs.createFileAbsolute(dst_absolute_path, .{});
@@ -631,17 +634,25 @@ fn gitClone(allocator: std.mem.Allocator, repository: []const u8, dir: []const u
 }
 
 fn downloadFile(allocator: std.mem.Allocator, target_file_path: []const u8, url: []const u8) !void {
-    std.debug.print("downloading {s}..\n", .{url});
-
-    const target_file = try std.fs.cwd().createFile(target_file_path, .{});
+    log.info("downloading {s}\n", .{url});
 
     var client: std.http.Client = .{ .allocator = allocator };
     defer client.deinit();
-    var fetch_res = try client.fetch(allocator, .{
+    var resp = std.ArrayList(u8).init(allocator);
+    defer resp.deinit();
+    var fetch_res = try client.fetch(.{
         .location = .{ .url = url },
-        .response_strategy = .{ .file = target_file },
+        .response_storage = .{ .dynamic = &resp },
+        .max_append_size = 50 * 1024 * 1024,
     });
-    fetch_res.deinit();
+    if (fetch_res.status.class() != .success) {
+        log.err("unable to fetch: HTTP {}", .{fetch_res.status});
+        return error.FetchFailed;
+    }
+    log.info("finished\n", .{});
+
+    const target_file = try std.fs.cwd().createFile(target_file_path, .{});
+    try target_file.writeAll(resp.items);
 }
 
 fn isLinuxDesktopLike(tag: std.Target.Os.Tag) bool {
