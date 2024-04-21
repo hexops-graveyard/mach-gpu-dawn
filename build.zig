@@ -13,6 +13,7 @@ pub fn build(b: *std.Build) !void {
         .target = target,
     });
     link(b, lib, &lib.root_module, .{});
+    b.installArtifact(lib);
 
     const mod = b.addModule("mach-gpu-dawn", .{
         .root_source_file = b.addWriteFiles().add("empty.c", ""),
