@@ -6,6 +6,32 @@ pub fn build(b: *std.Build) !void {
     const optimize = b.standardOptimizeOption(.{});
     const target = b.standardTargetOptions(.{});
 
+    const lib = b.addStaticLibrary(.{
+        .name = "mach-gpu-dawn-lib",
+        .root_source_file = b.addWriteFiles().add("empty.c", ""),
+        .optimize = optimize,
+        .target = target,
+    });
+    link(b, lib, &lib.root_module, .{});
+
+    const mod = b.addModule("mach-gpu-dawn", .{
+        .root_source_file = b.addWriteFiles().add("empty.c", ""),
+        .optimize = optimize,
+        .target = target,
+    });
+    mod.linkLibrary(lib);
+    addPathsToModule(b, mod, .{});
+
+    // _ = mod; // autofix
+    // module.addImport("build-options", build_options.createModule());
+
+    // const mod = b.addModule("mach-gpu-dawn", .{
+    //     .optimize = .ReleaseFast,
+    //     .target = target,
+    // });
+    // _ = mod; // autofix
+    // mod.linkLibrary(lib);
+
     const options = Options{
         .install_libs = true,
         .from_source = false,
@@ -90,7 +116,7 @@ pub const Options = struct {
     install_libs: bool = false,
 
     /// The binary release version to use from https://github.com/hexops/mach-gpu-dawn/releases
-            binary_version: []const u8 = "release-cdd4a1a",
+    binary_version: []const u8 = "release-cdd4a1a",
 
     /// Detects the default options to use for the given target.
     pub fn detectDefaults(self: Options, target: std.Target) Options {
@@ -112,7 +138,7 @@ pub const Options = struct {
     }
 };
 
-pub fn link(b: *std.Build, step: *std.Build.Step.Compile, mod: *std.Build.Module, options: Options) void {
+fn link(b: *std.Build, step: *std.Build.Step.Compile, mod: *std.Build.Module, options: Options) void {
     const target = step.rootModuleTarget();
     const opt = options.detectDefaults(target);
 

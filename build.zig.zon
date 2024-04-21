@@ -19,6 +19,7 @@
         .direct3d_headers = .{
             .url = "https://pkg.machengine.org/direct3d-headers/bc2fafe176dbd36bff6d1c036488c015bd4c0f7b.tar.gz",
             .hash = "12201f3096410a22af7978c7c57636f251669c335919740e42fc1785180435f63f1c",
+            .lazy = true,
         },
         .vulkan_headers = .{
             .url = "https://pkg.machengine.org/vulkan-headers/e33f2e482893a90bb36d67649ab30d5236ac21ab.tar.gz",
