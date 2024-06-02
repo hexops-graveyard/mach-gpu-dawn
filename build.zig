@@ -14,7 +14,7 @@ pub fn build(b: *std.Build) !void {
     // or Dawn C++ examples for functional example code.
     const example = b.addExecutable(.{
         .name = "empty",
-        .root_source_file = .{ .path = "src/main.zig" },
+        .root_source_file = b.path("src/main.zig"),
         .target = target,
         .optimize = optimize,
     });
@@ -46,9 +46,9 @@ pub const DownloadBinaryStep = struct {
         return download_step;
     }
 
-    fn make(step: *std.Build.Step, prog_node: *std.Progress.Node) anyerror!void {
+    fn make(step: *std.Build.Step, prog_node: std.Progress.Node) anyerror!void {
         _ = prog_node;
-        const download_step = @fieldParentPtr(DownloadBinaryStep, "step", step);
+        const download_step: *DownloadBinaryStep = @fieldParentPtr("step", step);
         try downloadFromBinary(download_step.b, download_step.target, download_step.options);
     }
 };
@@ -90,7 +90,7 @@ pub const Options = struct {
     install_libs: bool = false,
 
     /// The binary release version to use from https://github.com/hexops/mach-gpu-dawn/releases
-            binary_version: []const u8 = "release-cdd4a1a",
+    binary_version: []const u8 = "release-cdd4a1a",
 
     /// Detects the default options to use for the given target.
     pub fn detectDefaults(self: Options, target: std.Target) Options {
@@ -142,9 +142,9 @@ fn linkFromSource(b: *std.Build, step: *std.Build.Step.Compile, mod: *std.Build.
     // branch: mach
     try ensureGitRepoCloned(b.allocator, "https://github.com/hexops/DirectXShaderCompiler", "bb5211aa247978e2ab75bea9f5c985ba3fabd269", sdkPath("/libs/DirectXShaderCompiler"));
 
-    step.addIncludePath(.{ .path = sdkPath("/libs/dawn/out/Debug/gen/include") });
-    step.addIncludePath(.{ .path = sdkPath("/libs/dawn/include") });
-    step.addIncludePath(.{ .path = sdkPath("/src/dawn") });
+    step.addIncludePath(.{ .cwd_relative = sdkPath("/libs/dawn/out/Debug/gen/include") });
+    step.addIncludePath(.{ .cwd_relative = sdkPath("/libs/dawn/include") });
+    step.addIncludePath(.{ .cwd_relative = sdkPath("/src/dawn") });
 
     if (options.separate_libs) {
         const lib_dawn_common = try buildLibDawnCommon(b, step, options);
@@ -221,13 +221,13 @@ fn ensureGitRepoCloned(allocator: std.mem.Allocator, clone_url: []const u8, revi
 }
 
 fn exec(allocator: std.mem.Allocator, argv: []const []const u8, cwd: []const u8) !void {
-    var child = std.ChildProcess.init(argv, allocator);
+    var child = std.process.Child.init(argv, allocator);
     child.cwd = cwd;
     _ = try child.spawnAndWait();
 }
 
 fn getCurrentGitRevision(allocator: std.mem.Allocator, cwd: []const u8) ![]const u8 {
-    const result = try std.ChildProcess.run(.{ .allocator = allocator, .argv = &.{ "git", "rev-parse", "HEAD" }, .cwd = cwd });
+    const result = try std.process.Child.run(.{ .allocator = allocator, .argv = &.{ "git", "rev-parse", "HEAD" }, .cwd = cwd });
     allocator.free(result.stderr);
     if (result.stdout.len > 0) return result.stdout[0 .. result.stdout.len - 1]; // trim newline
     return result.stdout;
@@ -235,7 +235,7 @@ fn getCurrentGitRevision(allocator: std.mem.Allocator, cwd: []const u8) ![]const
 
 fn ensureGit(allocator: std.mem.Allocator) void {
     const argv = &[_][]const u8{ "git", "--version" };
-    const result = std.ChildProcess.run(.{
+    const result = std.process.Child.run(.{
         .allocator = allocator,
         .argv = argv,
         .cwd = ".",
@@ -351,12 +351,12 @@ pub fn linkFromBinary(b: *std.Build, step: *std.Build.Step.Compile, mod: *std.Bu
     const target_cache_dir = try std.fs.path.join(b.allocator, &.{ commit_cache_dir, zig_triple, release_tag });
     const include_dir = try std.fs.path.join(b.allocator, &.{ commit_cache_dir, "include" });
 
-    step.addLibraryPath(.{ .path = target_cache_dir });
+    step.addLibraryPath(.{ .cwd_relative = target_cache_dir });
     step.linkSystemLibrary("dawn");
     step.linkLibCpp();
 
-    step.addIncludePath(.{ .path = include_dir });
-    step.addIncludePath(.{ .path = sdkPath("/src/dawn") });
+    step.addIncludePath(.{ .cwd_relative = include_dir });
+    step.addIncludePath(.{ .cwd_relative = sdkPath("/src/dawn") });
 
     linkLibDawnCommonDependencies(b, step, mod, options);
     linkLibDawnPlatformDependencies(b, step, mod, options);
@@ -390,9 +390,9 @@ pub fn addPathsToModuleFromSource(b: *std.Build, module: *std.Build.Module, opti
     _ = b;
     _ = options;
 
-    module.addIncludePath(.{ .path = sdkPath("/libs/dawn/out/Debug/gen/include") });
-    module.addIncludePath(.{ .path = sdkPath("/libs/dawn/include") });
-    module.addIncludePath(.{ .path = sdkPath("/src/dawn") });
+    module.addIncludePath(.{ .cwd_relative = sdkPath("/libs/dawn/out/Debug/gen/include") });
+    module.addIncludePath(.{ .cwd_relative = sdkPath("/libs/dawn/include") });
+    module.addIncludePath(.{ .cwd_relative = sdkPath("/src/dawn") });
 }
 
 pub fn addPathsToModuleFromBinary(b: *std.Build, module: *std.Build.Module, options: Options) !void {
@@ -419,8 +419,8 @@ pub fn addPathsToModuleFromBinary(b: *std.Build, module: *std.Build.Module, opti
     _ = target_cache_dir;
     const include_dir = try std.fs.path.join(b.allocator, &.{ commit_cache_dir, "include" });
 
-    module.addIncludePath(.{ .path = include_dir });
-    module.addIncludePath(.{ .path = sdkPath("/src/dawn") });
+    module.addIncludePath(.{ .cwd_relative = include_dir });
+    module.addIncludePath(.{ .cwd_relative = sdkPath("/src/dawn") });
 }
 
 pub fn ensureBinaryDownloaded(
@@ -597,7 +597,7 @@ fn gzipDecompress(allocator: std.mem.Allocator, src_absolute_path: []const u8, d
 }
 
 fn gitBranchContainsCommit(allocator: std.mem.Allocator, branch: []const u8, commit: []const u8) !bool {
-    const result = try std.ChildProcess.run(.{
+    const result = try std.process.Child.run(.{
         .allocator = allocator,
         .argv = &.{ "git", "branch", branch, "--contains", commit },
         .cwd = sdkPath("/"),
@@ -610,7 +610,7 @@ fn gitBranchContainsCommit(allocator: std.mem.Allocator, branch: []const u8, com
 }
 
 fn getCurrentGitCommit(allocator: std.mem.Allocator) ![]const u8 {
-    const result = try std.ChildProcess.run(.{
+    const result = try std.process.Child.run(.{
         .allocator = allocator,
         .argv = &.{ "git", "rev-parse", "HEAD" },
         .cwd = sdkPath("/"),
@@ -621,7 +621,7 @@ fn getCurrentGitCommit(allocator: std.mem.Allocator) ![]const u8 {
 }
 
 fn gitClone(allocator: std.mem.Allocator, repository: []const u8, dir: []const u8) !bool {
-    const result = try std.ChildProcess.run(.{
+    const result = try std.process.Child.run(.{
         .allocator = allocator,
         .argv = &.{ "git", "clone", repository, dir },
         .cwd = sdkPath("/"),
